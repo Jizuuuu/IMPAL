@@ -1538,9 +1538,271 @@ Pada diagram, tanda panah dari Detail Reminder ke Tambah Reminder menggambarkan 
 - perubahan pengaturan disimpan dan digunakan pada penjadwalan notifikasi berikutnya;
 - pengguna hanya dapat melihat dan mengubah profil miliknya sendiri.
 **Kebutuhan terkait:** SKPL-F-002, SKPL-F-004, SKPL-F-005, SKPL-F-019, SKPL-F-044 s.d. SKPL-F-048.
- 
+
+ ---
+
+# 6. Perancangan Proses Sistem
+
+Bab ini menjelaskan langkah-langkah proses utama pada Eling. Alur data tingkat umum dibahas pada Bab 2.4, dan rancangan modul pada Bab 3.
+
+## 6.1 Proses Login
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-002, SKPL-F-003, SKPL-NF-010
+
+```mermaid
+sequenceDiagram
+    actor U as Pengguna
+    participant M as Aplikasi Mobile
+    participant A as Supabase Auth
+
+    U->>M: Masukkan email dan password
+    M->>M: Validasi input
+    alt Input tidak valid
+        M-->>U: Tampilkan pesan kesalahan
+    else Input valid
+        M->>A: Kirim kredensial
+        A-->>M: Hasil autentikasi
+        alt Kredensial benar
+            M-->>U: Sesi aktif, tampilkan Halaman Utama
+        else Kredensial salah
+            M-->>U: Tampilkan pesan kesalahan
+        end
+    end
+```
+
+Langkah proses:
+
+1. Pengguna memasukkan email dan password pada Halaman Login.
+2. Aplikasi memvalidasi bahwa input tidak kosong dan formatnya sesuai.
+3. Aplikasi mengirim kredensial ke Supabase Auth melalui HTTPS.
+4. Apabila kredensial benar, sesi pengguna dibuat dan pengguna diarahkan ke Halaman Utama.
+5. Apabila kredensial salah atau terjadi kegagalan koneksi, aplikasi menampilkan pesan kesalahan.
+
+Setelah login, seluruh akses data dibatasi pada data milik pengguna tersebut. Proses registrasi mengikuti alur yang sama dengan tambahan data nama (lihat 2.4.1 dan 3.1.3), dan logout mengakhiri sesi pengguna.
+
+## 6.2 Proses Membuat Reminder Manual
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-006 s.d. SKPL-F-009, SKPL-F-013, SKPL-F-014, SKPL-F-038, SKPL-NF-015
+
+```mermaid
+flowchart TD
+    A["Pengguna membuka Halaman Tambah Reminder"] --> B["Pengguna mengisi judul, tanggal, waktu, kategori, dan pengulangan"]
+    B --> C["Pengguna menekan Simpan"]
+    C --> D{"Data valid?"}
+    D -->|Tidak| E["Tampilkan pesan kesalahan"]
+    E --> B
+    D -->|Ya| F["Kirim data ke Backend/API"]
+    F --> G{"Penyimpanan berhasil?"}
+    G -->|Tidak| H["Tampilkan pesan kesalahan"]
+    G -->|Ya| I["Reminder tersimpan pada tabel reminders"]
+    I --> J["Aplikasi menjadwalkan local notification"]
+    J --> K["Reminder tampil pada daftar reminder"]
+```
+
+Langkah proses:
+
+1. Pengguna mengisi data reminder pada Halaman Tambah Reminder.
+2. Aplikasi memvalidasi data (judul, tanggal, dan waktu wajib diisi).
+3. Apabila valid, aplikasi mengirim data ke backend/API untuk disimpan pada PostgreSQL melalui Supabase, dengan status awal `aktif`.
+4. Setelah berhasil disimpan, aplikasi menjadwalkan local notification sesuai tanggal, waktu, dan pengulangan.
+5. Reminder ditampilkan pada daftar reminder.
+
+Proses mengubah reminder mengikuti langkah yang sama dan memperbarui jadwal notifikasi. Proses menghapus reminder menghapus data reminder dan membatalkan jadwal notifikasinya.
+
+## 6.3 Proses Membuat Reminder dengan Suara
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-023 s.d. SKPL-F-027, SKPL-NF-005, SKPL-NF-006, SKPL-NF-016
+
+```mermaid
+sequenceDiagram
+    actor U as Pengguna
+    participant M as Aplikasi Mobile
+    participant S as Speech-to-Text
+
+    U->>M: Buka Halaman Input Suara
+    M->>U: Minta izin mikrofon (jika belum diberikan)
+    U->>M: Tekan tombol mikrofon dan berbicara
+    M->>S: Kirim suara
+    M-->>U: Tampilkan indikator proses
+    alt Berhasil
+        S-->>M: Hasil transkripsi
+        M-->>U: Tampilkan teks pada kolom teks
+        U->>M: Periksa atau ubah teks
+        U->>M: Tekan Proses dengan AI
+        Note over M: Lanjut ke Proses Pemrosesan AI (6.4)
+    else Gagal
+        S-->>M: Kesalahan
+        M-->>U: Tampilkan pesan kesalahan
+        Note over U,M: Pengguna dapat mencoba lagi atau membuat reminder manual
+    end
+```
+
+Langkah proses:
+
+1. Pengguna membuka Halaman Input Suara dan memberikan izin mikrofon apabila diminta.
+2. Pengguna menekan tombol mikrofon dan menyampaikan reminder dalam bahasa natural.
+3. Aplikasi mengirim suara ke layanan Speech-to-Text dan menampilkan indikator proses.
+4. Hasil transkripsi ditampilkan pada kolom teks.
+5. Pengguna memeriksa dan, apabila perlu, mengubah teks.
+6. Pengguna menekan **Proses dengan AI** untuk melanjutkan ke proses 6.4.
+
+Apabila izin mikrofon ditolak, Speech-to-Text gagal, atau proses melewati batas waktu, aplikasi menampilkan pesan kesalahan. Pengguna dapat mengetik teks secara langsung pada kolom teks atau membuat reminder secara manual (proses 6.2).
+
+## 6.4 Proses Pemrosesan AI
+
+**Aktor:** Pengguna, Backend/API, Google Gemini API  
+**Acuan SKPL:** SKPL-F-028 s.d. SKPL-F-037, SKPL-NF-005, SKPL-NF-008, SKPL-NF-011, SKPL-NF-012
+
+```mermaid
+sequenceDiagram
+    actor U as Pengguna
+    participant M as Aplikasi Mobile
+    participant B as Backend/API
+    participant A as Google Gemini API
+
+    U->>M: Tekan Proses dengan AI
+    M-->>U: Tampilkan indikator proses
+    M->>B: Kirim teks input
+    B->>A: Request pemrosesan teks
+    alt AI berhasil
+        A-->>B: Aktivitas, tanggal, waktu, pengulangan
+        B-->>M: Hasil pemrosesan AI
+        M-->>U: Tampilkan Halaman Preview AI
+    else AI gagal atau tidak tersedia
+        A-->>B: Kesalahan
+        B-->>M: Status gagal
+        M-->>U: Tampilkan pesan kesalahan
+        Note over U,M: Pengguna tetap dapat membuat reminder manual
+    end
+```
+
+Langkah proses:
+
+1. Aplikasi mengirim teks input pengguna ke backend/API. Data yang dikirim dibatasi pada teks yang diperlukan untuk pemrosesan reminder.
+2. Backend meneruskan teks ke Google Gemini API. Kredensial layanan AI hanya berada pada sisi backend dan tidak disimpan pada aplikasi mobile.
+3. AI mengidentifikasi aktivitas, tanggal, waktu, dan pengulangan dari teks.
+4. Backend mengembalikan hasil ke aplikasi. Permintaan dan hasil pemrosesan dapat dicatat pada tabel `ai_requests`.
+5. Aplikasi menampilkan hasil pada Halaman Preview AI.
+
+Hasil AI hanya berupa data sementara untuk preview dan belum disimpan sebagai reminder pada tabel `reminders`. Apabila layanan AI tidak tersedia, gagal memproses input, atau melewati batas waktu, aplikasi menampilkan pesan kesalahan dan fungsi reminder manual tetap dapat digunakan. Format data dan penanganan kesalahan AI dibahas lebih rinci pada Bab 7.
+
+## 6.5 Proses Konfirmasi Reminder
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-033 s.d. SKPL-F-035, SKPL-NF-015
+
+```mermaid
+flowchart TD
+    A["Preview AI ditampilkan"] --> B["Pengguna memeriksa data"]
+    B --> C{"Data sudah benar?"}
+    C -->|Tidak| D["Pengguna mengubah data pada preview"]
+    D --> B
+    C -->|Ya| E["Pengguna menekan Konfirmasi"]
+    E --> F{"Data valid?"}
+    F -->|Tidak| G["Tampilkan pesan kesalahan"]
+    G --> B
+    F -->|Ya| H["Kirim reminder terkonfirmasi ke Backend/API"]
+    H --> I["Reminder disimpan pada tabel reminders"]
+    I --> J["Aplikasi menjadwalkan local notification"]
+    J --> K["Pengguna kembali ke Halaman Utama"]
+
+    B --> L["Pengguna menekan Batal"]
+    L --> M["Proses dibatalkan, reminder tidak disimpan"]
+```
+
+Langkah proses:
+
+1. Pengguna memeriksa aktivitas, tanggal, waktu, pengulangan, dan kategori pada Halaman Preview AI.
+2. Apabila terdapat informasi yang tidak sesuai atau kosong, pengguna mengubah atau melengkapinya.
+3. Pengguna menekan **Konfirmasi**. Aplikasi memvalidasi data seperti pada proses 6.2.
+4. Apabila valid, reminder disimpan pada PostgreSQL dengan status `aktif`, kemudian aplikasi menjadwalkan notifikasi.
+5. Apabila pengguna menekan **Batal**, tidak ada reminder yang disimpan.
+
+## 6.6 Proses Alarm dan Notifikasi
+
+**Aktor:** Sistem, Pengguna  
+**Acuan SKPL:** SKPL-F-016, SKPL-F-017, SKPL-F-021, SKPL-F-022, SKPL-F-044 s.d. SKPL-F-046, SKPL-NF-017
+
+```mermaid
+flowchart TD
+    A["Reminder tersimpan atau diperbarui"] --> B["Aplikasi membuat jadwal local notification"]
+    B --> C["Waktu reminder tiba"]
+    C --> D{"Notifikasi aktif dan izin diberikan?"}
+    D -->|Tidak| E["Notifikasi tidak ditampilkan"]
+    D -->|Ya| F["Tampilkan notifikasi berisi aktivitas reminder"]
+    F --> G["Suara dan getaran sesuai pengaturan pengguna"]
+    G --> H{"Tindakan pengguna"}
+    H -->|Snooze| I["Proses Snooze (6.7)"]
+    H -->|Selesai| J["Proses Menyelesaikan Reminder (6.8)"]
+    H -->|Tidak ada tindakan| K["Reminder dicatat terlewat pada riwayat"]
+```
+
+Langkah proses:
+
+1. Setelah reminder disimpan atau diubah, aplikasi menjadwalkan local notification berdasarkan tanggal, waktu, dan pengulangan.
+2. Penjadwalan dijalankan pada perangkat sehingga notifikasi tetap dapat muncul tanpa aplikasi dibuka secara terus-menerus.
+3. Ketika waktu reminder tiba, aplikasi memeriksa status notifikasi pada pengaturan dan izin notifikasi perangkat.
+4. Apabila notifikasi aktif dan izin diberikan, perangkat menampilkan notifikasi yang memuat aktivitas reminder, dengan suara dan getaran sesuai pengaturan pengguna.
+5. Pengguna memilih **Snooze** atau **Selesai**. Reminder yang tidak diselesaikan dicatat sebagai `terlewat` pada riwayat (lihat 2.4.4).
+
+Penampilan notifikasi bergantung pada izin dan konfigurasi sistem operasi perangkat (SKPL-NF-017). Ketentuan waktu yang menentukan kapan reminder dianggap terlewat belum ditetapkan pada SKPL dan ditentukan pada tahap implementasi.
+
+## 6.7 Proses Snooze
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-018, SKPL-F-019, SKPL-F-047
+
+```mermaid
+sequenceDiagram
+    actor U as Pengguna
+    participant M as Aplikasi Mobile
+    participant N as Local Notification
+
+    N-->>U: Tampilkan notifikasi reminder
+    U->>M: Pilih Snooze
+    M->>M: Ambil durasi snooze dari pengaturan
+    M->>N: Jadwalkan ulang notifikasi
+    Note over N: Setelah durasi snooze berakhir
+    N-->>U: Tampilkan notifikasi reminder kembali
+```
+
+Langkah proses:
+
+1. Pengguna memilih **Snooze** pada notifikasi reminder.
+2. Aplikasi mengambil durasi snooze default dari pengaturan pengguna.
+3. Aplikasi menjadwalkan ulang notifikasi reminder yang sama sesuai durasi tersebut.
+4. Setelah durasi snooze berakhir, notifikasi ditampilkan kembali.
+
+Snooze tidak mengubah reminder menjadi selesai; reminder tetap berstatus `aktif` sampai pengguna menandainya selesai atau reminder tercatat terlewat.
+
+## 6.8 Proses Menyelesaikan Reminder
+
+**Aktor:** Pengguna  
+**Acuan SKPL:** SKPL-F-020, SKPL-F-021, SKPL-F-040, SKPL-F-041
+
+```mermaid
+flowchart TD
+    A["Pengguna menandai reminder selesai (dari notifikasi atau Halaman Detail)"] --> B["Aplikasi mengirim pembaruan ke Backend/API"]
+    B --> C["Status reminder diperbarui menjadi selesai"]
+    C --> D["Catatan riwayat dibuat pada tabel reminder_history"]
+    D --> E["Notifikasi yang masih terjadwal untuk kejadian tersebut dibatalkan"]
+    E --> F["Reminder tampil pada Halaman Riwayat"]
+```
+
+Langkah proses:
+
+1. Pengguna menandai reminder sebagai selesai melalui notifikasi atau Halaman Detail Reminder.
+2. Aplikasi mengirim pembaruan ke backend/API, dan status reminder diubah menjadi `selesai`.
+3. Sistem membuat catatan pada `reminder_history` dengan status `selesai`, waktu selesai (`completed_at`), dan waktu pencatatan (`recorded_at`).
+4. Notifikasi yang masih terjadwal untuk kejadian tersebut dibatalkan.
+5. Reminder dapat dilihat pada Halaman Riwayat.
+
+Pada reminder berulang, notifikasi berikutnya tetap dijadwalkan sesuai pengaturan pengulangan (lihat 3.2.6). Pencatatan status per kejadian pada reminder berulang ditentukan pada tahap implementasi.
 ---
- 
+
 # 7. Perancangan Integrasi AI
  
 ## 7.1 Tujuan Integrasi AI
