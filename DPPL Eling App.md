@@ -192,13 +192,13 @@ flowchart LR
 ```
 
 ## 2.2 Arsitektur Sistem
-
+ 
 Arsitektur Eling dibagi menjadi beberapa lapisan berdasarkan tanggung jawab masing-masing komponen. Pembagian tersebut bertujuan agar sistem lebih mudah dikembangkan, dipelihara, dan diuji.
-
+ 
 ### 2.2.1 Lapisan Presentasi
-
+ 
 Lapisan presentasi berada pada aplikasi mobile Flutter dan bertanggung jawab terhadap interaksi langsung dengan pengguna. Fungsi utama lapisan ini meliputi:
-
+ 
 - menampilkan halaman aplikasi;
 - menerima input pengguna;
 - menampilkan daftar reminder;
@@ -208,13 +208,12 @@ Lapisan presentasi berada pada aplikasi mobile Flutter dan bertanggung jawab ter
 - menerima konfirmasi pengguna;
 - menampilkan notifikasi dan status reminder;
 - menyediakan navigasi antarhalaman.
-
 Lapisan ini tidak bertanggung jawab langsung terhadap penyimpanan permanen data. Data yang membutuhkan penyimpanan akan diteruskan melalui mekanisme komunikasi dengan backend/API.
-
+ 
 ### 2.2.2 Lapisan Aplikasi
-
+ 
 Lapisan aplikasi menangani logika utama yang berkaitan dengan proses reminder. Fungsi lapisan aplikasi meliputi:
-
+ 
 - validasi data reminder;
 - pembuatan reminder;
 - perubahan reminder;
@@ -225,50 +224,167 @@ Lapisan aplikasi menangani logika utama yang berkaitan dengan proses reminder. F
 - pengelolaan riwayat;
 - pencarian reminder;
 - pengelolaan proses konfirmasi hasil AI.
-
 Lapisan ini memastikan bahwa data yang akan disimpan telah memenuhi aturan yang ditentukan oleh sistem.
-
+ 
 ### 2.2.3 Lapisan Backend/API
-
+ 
 Lapisan backend/API berfungsi sebagai penghubung antara aplikasi mobile dengan layanan backend dan layanan eksternal. Pada Eling, backend menggunakan **Supabase** untuk menyediakan layanan:
-
+ 
 - autentikasi pengguna;
 - akses data melalui API;
 - pengelolaan basis data;
 - pengelolaan akses terhadap data pengguna.
-
 Backend juga menjadi bagian dari jalur komunikasi pemrosesan AI. Input reminder yang telah diberikan oleh pengguna dapat diteruskan ke layanan Google Gemini API melalui backend/API. Dengan pendekatan tersebut, kredensial layanan AI tidak ditempatkan secara langsung pada aplikasi mobile.
-
+ 
 ### 2.2.4 Lapisan Data
-
+ 
 Lapisan data menggunakan **PostgreSQL melalui Supabase**.Lapisan ini digunakan untuk menyimpan data secara permanen, antara lain:
-
+ 
 - data pengguna;
 - data reminder;
 - data kategori;
 - data riwayat reminder;
 - data pengaturan pengguna;
 - data lain yang diperlukan untuk mendukung fungsi aplikasi.
-
 Data reminder dikaitkan dengan pengguna sehingga sistem dapat membatasi akses berdasarkan akun yang sedang digunakan.
-
+ 
 ### 2.2.5 Lapisan Layanan Eksternal
-
+ 
 Lapisan layanan eksternal terdiri dari layanan yang tidak dijalankan secara langsung oleh aplikasi Eling. Layanan tersebut meliputi:
-
+ 
 1. **Google Gemini API**, digunakan untuk membantu memahami input reminder dalam bahasa natural.
 2. **Speech-to-Text Service**, digunakan untuk mengubah suara pengguna menjadi teks.
-
 Penggunaan layanan eksternal dilakukan hanya ketika fitur yang bersangkutan digunakan oleh pengguna.
-
+ 
 ### 2.2.6 Lapisan Perangkat
-
+ 
 Beberapa fungsi Eling memanfaatkan kemampuan perangkat mobile, yaitu:
-
+ 
 - mikrofon untuk input suara;
 - layar sentuh untuk interaksi;
 - sistem notifikasi perangkat;
 - speaker untuk suara notifikasi atau alarm;
 - penyimpanan dan konfigurasi perangkat yang diperlukan oleh mekanisme notifikasi.
-
 Local notification dijalankan pada perangkat pengguna berdasarkan reminder yang telah dikonfirmasi dan dijadwalkan.
+ 
+## 2.3 Komponen Sistem
+ 
+Komponen sistem Eling disusun berdasarkan teknologi yang telah ditetapkan pada rancangan project dan kebutuhan yang didefinisikan pada SKPL.
+ 
+### 2.3.1 Komponen Utama
+ 
+| Komponen | Teknologi | Tanggung Jawab |
+| --- | --- | --- |
+| Aplikasi Mobile Eling | Flutter, Dart | Menampilkan antarmuka, menerima input pengguna, memvalidasi data reminder, mengelola proses konfirmasi hasil AI, serta menjadwalkan alarm dan notifikasi pada perangkat. |
+| Backend/API | Supabase, REST API | Menyediakan akses data melalui API, mengelola hak akses data berdasarkan akun pengguna, dan meneruskan input reminder ke layanan AI. |
+| Autentikasi | Supabase Auth | Menangani registrasi, login, logout, dan autentikasi pengguna. |
+| Basis Data | PostgreSQL (melalui Supabase) | Menyimpan data pengguna, reminder, kategori, riwayat reminder, dan pengaturan pengguna. |
+| AI Reminder Assistant | Google Gemini API | Membantu mengenali aktivitas, tanggal, waktu, dan pengulangan dari teks input bahasa natural. |
+| Speech-to-Text | Speech-to-Text API/Service, terintegrasi pada Flutter | Mengubah suara pengguna menjadi teks. |
+| Local Notification dan Alarm | Local Notification, terintegrasi pada Flutter | Memberikan alarm atau notifikasi pada waktu reminder, termasuk ketika aplikasi tidak sedang dibuka. |
+| Perangkat Android | Mikrofon, speaker, layar sentuh, sistem notifikasi | Menyediakan perangkat keras yang dibutuhkan untuk input suara, suara alarm, interaksi, dan penampilan notifikasi. |
+ 
+### 2.3.2 Komponen Internal Aplikasi
+ 
+Fungsi aplikasi dibagi ke dalam modul-modul berikut. Perancangan setiap modul dijelaskan pada Bab 3.
+ 
+| Modul | Fungsi Utama | Fitur Terkait |
+| --- | --- | --- |
+| Modul Autentikasi | Registrasi, login, logout, dan pengelolaan profil pengguna. | Autentikasi dan manajemen pengguna |
+| Modul Manajemen Reminder | Membuat, melihat, mengubah, menghapus reminder, serta mengatur pengulangan. | Manajemen reminder, reminder berulang |
+| Modul Alarm dan Notifikasi | Menjadwalkan notifikasi, melakukan snooze, dan menandai reminder selesai. | Alarm dan notifikasi |
+| Modul Speech-to-Text | Menerima input suara dan menampilkan hasil transkripsi. | Speech-to-Text |
+| Modul AI Reminder Assistant | Mengirim teks input, menerima hasil pemrosesan AI, menampilkan preview, dan meminta konfirmasi. | AI Reminder Assistant, AI Reminder Preview |
+| Modul Kategori | Mengelompokkan reminder berdasarkan kategori. | Kategori reminder |
+| Modul Riwayat Reminder | Menampilkan reminder yang selesai atau terlewat. | Riwayat reminder |
+| Modul Pencarian | Mencari reminder berdasarkan kata kunci dan kategori. | Pencarian reminder |
+| Modul Pengaturan | Mengatur status notifikasi, suara, getaran, dan durasi snooze. | Pengaturan reminder dan notifikasi |
+ 
+### 2.3.3 Hubungan Antarkomponen
+ 
+- Aplikasi mobile berkomunikasi dengan backend/API melalui HTTPS.
+- Aplikasi mobile berkomunikasi dengan layanan Speech-to-Text untuk mengubah suara menjadi teks.
+- Backend/API berkomunikasi dengan Google Gemini API untuk memproses teks input reminder, sehingga kredensial layanan AI tidak disimpan pada aplikasi mobile.
+- Backend/API menyimpan dan mengambil data pada PostgreSQL.
+- Aplikasi mobile menjadwalkan alarm dan notifikasi melalui mekanisme local notification pada perangkat.
+## 2.4 Alur Data Sistem
+ 
+Bagian ini menjelaskan alur data pada fungsi-fungsi utama Eling. Penjelasan langkah proses yang lebih rinci dibahas pada Bab 6.
+ 
+### 2.4.1 Alur Autentikasi
+ 
+1. Pengguna memasukkan data registrasi atau login pada aplikasi mobile.
+2. Aplikasi mengirim data tersebut ke layanan autentikasi pada backend.
+3. Backend memverifikasi data dan mengembalikan hasil autentikasi.
+4. Apabila berhasil, pengguna dapat mengakses data reminder miliknya sendiri. Apabila gagal, aplikasi menampilkan pesan kesalahan.
+### 2.4.2 Alur Pembuatan Reminder Manual
+ 
+```mermaid
+flowchart TD
+    A["Pengguna mengisi data reminder"] --> B["Aplikasi memvalidasi data"]
+    B -->|Tidak valid| C["Tampilkan pesan kesalahan"]
+    C --> A
+    B -->|Valid| D["Kirim data ke Backend/API"]
+    D --> E["Data disimpan pada PostgreSQL"]
+    E --> F["Aplikasi menjadwalkan alarm atau notifikasi"]
+    F --> G["Reminder muncul pada daftar reminder"]
+```
+ 
+### 2.4.3 Alur Pembuatan Reminder dengan Suara dan AI
+ 
+```mermaid
+sequenceDiagram
+    actor U as Pengguna
+    participant M as Aplikasi Mobile
+    participant S as Speech-to-Text
+    participant B as Backend/API
+    participant A as Google Gemini API
+    participant D as PostgreSQL
+ 
+    U->>M: Memberikan input suara
+    M->>S: Kirim suara
+    S-->>M: Hasil transkripsi
+    M->>U: Tampilkan transkripsi
+    U->>M: Periksa atau ubah teks
+    M->>B: Kirim teks input
+    B->>A: Request pemrosesan teks
+    A-->>B: Aktivitas, tanggal, waktu, pengulangan
+    B-->>M: Hasil pemrosesan AI
+    M->>U: Tampilkan preview reminder
+    U->>M: Ubah data (jika perlu) dan konfirmasi
+    M->>B: Kirim reminder terkonfirmasi
+    B->>D: Simpan reminder
+    M->>M: Jadwalkan alarm atau notifikasi
+```
+ 
+Ketentuan pada alur ini:
+ 
+- hasil pemrosesan AI hanya ditampilkan sebagai preview dan belum menjadi reminder aktif;
+- reminder baru disimpan setelah pengguna memberikan konfirmasi;
+- teks hasil Speech-to-Text dapat diubah pengguna sebelum dikirim ke AI;
+- data yang dikirim ke layanan AI dibatasi pada teks input yang diperlukan untuk pemrosesan reminder;
+- apabila Speech-to-Text atau layanan AI gagal, aplikasi menampilkan pesan kesalahan dan pengguna tetap dapat membuat reminder secara manual.
+### 2.4.4 Alur Alarm dan Notifikasi
+ 
+1. Setelah reminder disimpan, aplikasi menjadwalkan alarm atau notifikasi lokal sesuai tanggal, waktu, dan pengulangan reminder.
+2. Ketika waktu reminder tiba, perangkat menampilkan notifikasi yang memuat aktivitas reminder, sesuai pengaturan suara dan getaran pengguna.
+3. Pengguna dapat memilih salah satu tindakan:
+   - **Snooze**: alarm dijadwalkan kembali sesuai durasi snooze;
+   - **Selesai**: status reminder diperbarui menjadi selesai dan dicatat pada riwayat.
+4. Reminder yang tidak diselesaikan dicatat dengan status terlewat pada riwayat.
+Penjadwalan notifikasi dijalankan pada perangkat sehingga reminder tetap dapat memberikan notifikasi tanpa aplikasi dibuka secara terus-menerus, selama izin notifikasi diberikan pengguna.
+ 
+### 2.4.5 Alur Data Pengelolaan Reminder
+ 
+| Proses | Data Masuk | Data Keluar |
+| --- | --- | --- |
+| Melihat daftar dan detail reminder | Permintaan pengguna | Data reminder milik pengguna yang sedang login |
+| Mengubah reminder | Data reminder yang diperbarui | Data reminder tersimpan dan jadwal notifikasi diperbarui |
+| Menghapus reminder | Permintaan hapus | Reminder terhapus dan jadwal notifikasi dibatalkan |
+| Mencari reminder | Kata kunci atau kategori | Daftar reminder yang sesuai |
+| Melihat riwayat | Permintaan pengguna | Daftar reminder berstatus selesai atau terlewat |
+| Mengubah pengaturan | Status notifikasi, suara, getaran, durasi snooze | Pengaturan tersimpan dan digunakan pada penjadwalan berikutnya |
+ 
+Seluruh akses data pada proses di atas dibatasi berdasarkan akun pengguna yang sedang login.
+ 
+---
