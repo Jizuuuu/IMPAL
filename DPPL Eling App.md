@@ -190,3 +190,85 @@ flowchart LR
     Mobile -->|Jadwalkan Reminder| Notif
     Notif -->|Alarm atau Notifikasi| User
 ```
+
+## 2.2 Arsitektur Sistem
+
+Arsitektur Eling dibagi menjadi beberapa lapisan berdasarkan tanggung jawab masing-masing komponen. Pembagian tersebut bertujuan agar sistem lebih mudah dikembangkan, dipelihara, dan diuji.
+
+### 2.2.1 Lapisan Presentasi
+
+Lapisan presentasi berada pada aplikasi mobile Flutter dan bertanggung jawab terhadap interaksi langsung dengan pengguna. Fungsi utama lapisan ini meliputi:
+
+- menampilkan halaman aplikasi;
+- menerima input pengguna;
+- menampilkan daftar reminder;
+- menampilkan detail reminder;
+- menampilkan hasil Speech-to-Text;
+- menampilkan preview hasil AI;
+- menerima konfirmasi pengguna;
+- menampilkan notifikasi dan status reminder;
+- menyediakan navigasi antarhalaman.
+
+Lapisan ini tidak bertanggung jawab langsung terhadap penyimpanan permanen data. Data yang membutuhkan penyimpanan akan diteruskan melalui mekanisme komunikasi dengan backend/API.
+
+### 2.2.2 Lapisan Aplikasi
+
+Lapisan aplikasi menangani logika utama yang berkaitan dengan proses reminder. Fungsi lapisan aplikasi meliputi:
+
+- validasi data reminder;
+- pembuatan reminder;
+- perubahan reminder;
+- penghapusan reminder;
+- pengaturan reminder berulang;
+- pengelolaan status reminder;
+- pengelolaan kategori;
+- pengelolaan riwayat;
+- pencarian reminder;
+- pengelolaan proses konfirmasi hasil AI.
+
+Lapisan ini memastikan bahwa data yang akan disimpan telah memenuhi aturan yang ditentukan oleh sistem.
+
+### 2.2.3 Lapisan Backend/API
+
+Lapisan backend/API berfungsi sebagai penghubung antara aplikasi mobile dengan layanan backend dan layanan eksternal. Pada Eling, backend menggunakan **Supabase** untuk menyediakan layanan:
+
+- autentikasi pengguna;
+- akses data melalui API;
+- pengelolaan basis data;
+- pengelolaan akses terhadap data pengguna.
+
+Backend juga menjadi bagian dari jalur komunikasi pemrosesan AI. Input reminder yang telah diberikan oleh pengguna dapat diteruskan ke layanan Google Gemini API melalui backend/API. Dengan pendekatan tersebut, kredensial layanan AI tidak ditempatkan secara langsung pada aplikasi mobile.
+
+### 2.2.4 Lapisan Data
+
+Lapisan data menggunakan **PostgreSQL melalui Supabase**.Lapisan ini digunakan untuk menyimpan data secara permanen, antara lain:
+
+- data pengguna;
+- data reminder;
+- data kategori;
+- data riwayat reminder;
+- data pengaturan pengguna;
+- data lain yang diperlukan untuk mendukung fungsi aplikasi.
+
+Data reminder dikaitkan dengan pengguna sehingga sistem dapat membatasi akses berdasarkan akun yang sedang digunakan.
+
+### 2.2.5 Lapisan Layanan Eksternal
+
+Lapisan layanan eksternal terdiri dari layanan yang tidak dijalankan secara langsung oleh aplikasi Eling. Layanan tersebut meliputi:
+
+1. **Google Gemini API**, digunakan untuk membantu memahami input reminder dalam bahasa natural.
+2. **Speech-to-Text Service**, digunakan untuk mengubah suara pengguna menjadi teks.
+
+Penggunaan layanan eksternal dilakukan hanya ketika fitur yang bersangkutan digunakan oleh pengguna.
+
+### 2.2.6 Lapisan Perangkat
+
+Beberapa fungsi Eling memanfaatkan kemampuan perangkat mobile, yaitu:
+
+- mikrofon untuk input suara;
+- layar sentuh untuk interaksi;
+- sistem notifikasi perangkat;
+- speaker untuk suara notifikasi atau alarm;
+- penyimpanan dan konfigurasi perangkat yang diperlukan oleh mekanisme notifikasi.
+
+Local notification dijalankan pada perangkat pengguna berdasarkan reminder yang telah dikonfirmasi dan dijadwalkan.
