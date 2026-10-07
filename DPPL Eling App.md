@@ -388,3 +388,739 @@ Penjadwalan notifikasi dijalankan pada perangkat sehingga reminder tetap dapat m
 Seluruh akses data pada proses di atas dibatasi berdasarkan akun pengguna yang sedang login.
  
 ---
+
+# 3. Perancangan Modul Sistem
+
+Bab ini menjelaskan rancangan modul perangkat lunak yang digunakan pada aplikasi Eling. Setiap modul dirancang berdasarkan kebutuhan fungsional yang telah didefinisikan pada dokumen SKPL. Pembagian modul dilakukan berdasarkan fungsi utama sistem agar proses implementasi, pengujian, dan pemeliharaan aplikasi dapat dilakukan secara terstruktur.
+
+Modul yang terdapat pada aplikasi Eling meliputi:
+
+1. Modul Autentikasi
+2. Modul Manajemen Reminder
+3. Modul Alarm dan Notifikasi
+4. Modul Speech-to-Text
+5. Modul AI Reminder Assistant
+6. Modul Kategori
+7. Modul Riwayat Reminder
+8. Modul Pencarian
+9. Modul Pengaturan
+
+---
+
+## 3.1 Modul Autentikasi
+
+Modul Autentikasi digunakan untuk mengelola identitas pengguna dan akses pengguna terhadap aplikasi Eling. Modul ini menggunakan **Supabase Auth** sebagai layanan autentikasi.
+
+Modul autentikasi digunakan pada proses registrasi, login, logout, serta validasi sesi pengguna. Setiap pengguna yang berhasil melakukan autentikasi hanya dapat mengakses data yang berkaitan dengan akun miliknya.
+
+### 3.1.1 Fungsi Modul
+
+Fungsi utama Modul Autentikasi adalah:
+
+* melakukan registrasi akun baru;
+* melakukan login pengguna;
+* melakukan logout pengguna;
+* memvalidasi sesi pengguna;
+* mengidentifikasi pengguna yang sedang login;
+* membatasi akses data berdasarkan akun pengguna.
+
+### 3.1.2 Input
+
+Data yang digunakan dalam proses autentikasi meliputi:
+
+| Data     | Keterangan                          |
+| -------- | ----------------------------------- |
+| Nama     | Nama pengguna pada saat registrasi  |
+| Email    | Alamat email pengguna               |
+| Password | Kata sandi pengguna                 |
+| Session  | Informasi sesi autentikasi pengguna |
+
+### 3.1.3 Proses
+
+Pada proses registrasi, pengguna memasukkan nama, email, dan password. Sistem melakukan validasi terhadap data yang dimasukkan sebelum meneruskannya ke Supabase Auth.
+
+Pada proses login, pengguna memasukkan email dan password. Supabase Auth melakukan validasi kredensial. Apabila kredensial benar, sistem membuat sesi pengguna dan memberikan akses ke aplikasi.
+
+Pada proses logout, sesi pengguna diakhiri sehingga pengguna harus melakukan login kembali untuk mengakses data yang membutuhkan autentikasi.
+
+### 3.1.4 Output
+
+Output Modul Autentikasi meliputi:
+
+* akun pengguna berhasil dibuat;
+* pengguna berhasil login;
+* sesi pengguna aktif;
+* pengguna berhasil logout;
+* pesan kesalahan apabila proses autentikasi gagal.
+
+### 3.1.5 Alur Modul
+
+```text
+Pengguna
+    |
+    v
+Masukkan Email dan Password
+    |
+    v
+Validasi Input
+    |
+    v
+Supabase Auth
+    |
+    +---- Tidak Valid ----> Pesan Kesalahan
+    |
+    v
+Sesi Pengguna Aktif
+    |
+    v
+Masuk ke Aplikasi
+```
+
+---
+
+## 3.2 Modul Manajemen Reminder
+
+Modul Manajemen Reminder merupakan modul utama dalam aplikasi Eling. Modul ini digunakan untuk membuat, melihat, mengubah, dan menghapus reminder.
+
+Pengguna dapat menentukan aktivitas, tanggal, waktu, kategori, serta pengulangan reminder. Reminder yang telah berhasil disimpan akan digunakan oleh sistem untuk menjadwalkan notifikasi.
+
+### 3.2.1 Fungsi Modul
+
+Fungsi utama Modul Manajemen Reminder adalah:
+
+* membuat reminder;
+* melihat daftar reminder;
+* melihat detail reminder;
+* mengubah reminder;
+* menghapus reminder;
+* menentukan tanggal reminder;
+* menentukan waktu reminder;
+* menentukan kategori reminder;
+* mengatur reminder berulang;
+* mengubah status reminder.
+
+### 3.2.2 Input
+
+Data reminder yang digunakan meliputi:
+
+| Data            | Keterangan                      |
+| --------------- | ------------------------------- |
+| Judul/Aktivitas | Aktivitas yang ingin diingatkan |
+| Tanggal         | Tanggal pelaksanaan reminder    |
+| Waktu           | Waktu pelaksanaan reminder      |
+| Kategori        | Kategori aktivitas              |
+| Pengulangan     | Pengaturan reminder berulang    |
+| Status          | Status reminder                 |
+
+### 3.2.3 Proses
+
+Pengguna mengisi data reminder melalui halaman tambah reminder. Sistem melakukan validasi terhadap data tersebut.
+
+Apabila data valid, aplikasi mengirimkan data ke backend/API untuk disimpan pada PostgreSQL melalui Supabase.
+
+Setelah data berhasil disimpan, sistem menggunakan informasi tanggal dan waktu untuk menjadwalkan local notification pada perangkat pengguna.
+
+### 3.2.4 Output
+
+Output Modul Manajemen Reminder meliputi:
+
+* reminder berhasil dibuat;
+* daftar reminder pengguna;
+* detail reminder;
+* reminder berhasil diperbarui;
+* reminder berhasil dihapus;
+* pesan kesalahan apabila proses gagal.
+
+### 3.2.5 Alur Modul
+
+```text
+Pengguna
+    |
+    v
+Tambah / Pilih Reminder
+    |
+    v
+Input Data Reminder
+    |
+    v
+Validasi Data
+    |
+    +---- Tidak Valid ----> Tampilkan Pesan Kesalahan
+    |
+    v
+Backend / API
+    |
+    v
+PostgreSQL
+    |
+    v
+Reminder Tersimpan
+    |
+    v
+Jadwalkan Notifikasi
+```
+
+### 3.2.6 Reminder Berulang
+
+Pengguna dapat mengatur reminder agar dilakukan secara berulang.
+
+Pilihan pengulangan yang disediakan meliputi:
+
+* sekali;
+* setiap hari;
+* hari kerja;
+* mingguan;
+* pengulangan tertentu.
+
+Informasi pengulangan disimpan bersama data reminder dan digunakan untuk menentukan jadwal notifikasi berikutnya.
+
+---
+
+## 3.3 Modul Alarm dan Notifikasi
+
+Modul Alarm dan Notifikasi bertanggung jawab untuk memberikan pengingat kepada pengguna ketika waktu reminder telah tiba.
+
+Eling menggunakan **local notification** pada perangkat mobile. Dengan mekanisme ini, notifikasi dapat diberikan tanpa pengguna harus membuka aplikasi secara terus-menerus.
+
+### 3.3.1 Fungsi Modul
+
+Fungsi utama modul meliputi:
+
+* menjadwalkan notifikasi;
+* menampilkan notifikasi reminder;
+* menampilkan aktivitas reminder;
+* menjalankan snooze;
+* menjadwalkan ulang reminder setelah snooze;
+* mendukung penyelesaian reminder.
+
+### 3.3.2 Input
+
+Input Modul Alarm dan Notifikasi meliputi:
+
+| Data              | Keterangan                                 |
+| ----------------- | ------------------------------------------ |
+| Judul Reminder    | Aktivitas yang ditampilkan pada notifikasi |
+| Tanggal           | Tanggal notifikasi                         |
+| Waktu             | Waktu notifikasi                           |
+| Pengulangan       | Jadwal pengulangan                         |
+| Status Notifikasi | Status aktif/nonaktif                      |
+| Durasi Snooze     | Durasi penundaan reminder                  |
+
+### 3.3.3 Proses
+
+Setelah reminder berhasil disimpan, sistem membuat jadwal local notification berdasarkan tanggal dan waktu reminder.
+
+Ketika waktu reminder tiba, sistem menampilkan notifikasi kepada pengguna. Pengguna dapat menandai reminder sebagai selesai atau memilih snooze.
+
+### 3.3.4 Output
+
+Output modul meliputi:
+
+* notifikasi reminder;
+* alarm;
+* perubahan jadwal setelah snooze;
+* perubahan status reminder.
+
+### 3.3.5 Alur Modul
+
+```text
+Reminder Tersimpan
+       |
+       v
+Data Tanggal dan Waktu
+       |
+       v
+Local Notification Scheduler
+       |
+       v
+Waktu Reminder Tiba
+       |
+       v
+Notifikasi Ditampilkan
+       |
+       +------------------+
+       |                  |
+       v                  v
+    Selesai             Snooze
+       |                  |
+       v                  v
+Status Selesai      Jadwalkan Ulang
+```
+
+### 3.3.6 Snooze
+
+Snooze digunakan untuk menunda reminder ketika pengguna belum dapat menyelesaikan aktivitas.
+
+Pengguna dapat memilih durasi snooze yang tersedia. Setelah durasi snooze berakhir, sistem menjadwalkan kembali notifikasi reminder.
+
+---
+
+## 3.4 Modul Speech-to-Text
+
+Modul Speech-to-Text digunakan untuk memungkinkan pengguna membuat reminder menggunakan input suara.
+
+Suara pengguna dikonversi menjadi teks menggunakan layanan Speech-to-Text. Hasil transkripsi kemudian ditampilkan kepada pengguna agar dapat diperiksa dan diperbaiki sebelum digunakan dalam proses berikutnya.
+
+### 3.4.1 Fungsi Modul
+
+Fungsi Modul Speech-to-Text adalah:
+
+* menerima input suara pengguna;
+* menggunakan mikrofon perangkat;
+* mengirim input suara ke layanan Speech-to-Text;
+* menerima hasil transkripsi;
+* menampilkan hasil transkripsi;
+* memungkinkan pengguna mengubah hasil transkripsi.
+
+### 3.4.2 Input
+
+Input modul berupa suara pengguna melalui mikrofon perangkat.
+
+Contoh input:
+
+> "Besok jam 8 pagi ingatkan saya untuk mengerjakan laporan."
+
+### 3.4.3 Proses
+
+Pengguna menekan tombol input suara dan memberikan izin penggunaan mikrofon apabila diperlukan.
+
+Suara kemudian diproses oleh layanan Speech-to-Text dan diubah menjadi teks.
+
+Hasil transkripsi dikembalikan ke aplikasi dan ditampilkan kepada pengguna.
+
+### 3.4.4 Output
+
+Output modul berupa teks hasil transkripsi.
+
+Contoh:
+
+```text
+Besok jam 8 pagi ingatkan saya untuk mengerjakan laporan.
+```
+
+Pengguna dapat mengubah hasil transkripsi sebelum teks dikirimkan untuk proses AI.
+
+### 3.4.5 Alur Modul
+
+```text
+Pengguna
+    |
+    v
+Input Suara
+    |
+    v
+Mikrofon
+    |
+    v
+Speech-to-Text Service
+    |
+    v
+Hasil Transkripsi
+    |
+    v
+Tampilkan Teks
+    |
+    v
+Pengguna Memeriksa / Mengubah
+    |
+    v
+Teks Siap Diproses
+```
+
+Apabila proses Speech-to-Text gagal, sistem menampilkan pesan kesalahan. Pengguna tetap dapat menggunakan input manual untuk membuat reminder.
+
+---
+
+## 3.5 Modul AI Reminder Assistant
+
+Modul AI Reminder Assistant digunakan untuk membantu pengguna membuat reminder menggunakan bahasa natural.
+
+Modul ini menggunakan **Google Gemini API** untuk membantu memahami informasi yang terdapat pada input pengguna.
+
+AI digunakan sebagai fitur pendukung. Sistem tidak langsung menyimpan hasil pemrosesan AI sebagai reminder aktif. Hasil AI harus ditampilkan kepada pengguna dalam bentuk preview dan pengguna harus memberikan konfirmasi sebelum reminder disimpan.
+
+### 3.5.1 Fungsi Modul
+
+Fungsi utama Modul AI Reminder Assistant meliputi:
+
+* menerima teks input pengguna;
+* mengirim teks ke layanan AI;
+* mengenali aktivitas reminder;
+* mengenali tanggal reminder;
+* mengenali waktu reminder;
+* mengenali informasi pengulangan;
+* menghasilkan data reminder;
+* menampilkan hasil dalam bentuk preview.
+
+### 3.5.2 Input
+
+Input dapat berasal dari:
+
+1. teks yang diketik pengguna;
+2. hasil Speech-to-Text.
+
+Contoh input:
+
+> "Besok jam 7 pagi ingatkan saya untuk mengerjakan tugas pemrograman."
+
+### 3.5.3 Proses
+
+Teks pengguna dikirim dari aplikasi menuju backend/API.
+
+Backend kemudian meneruskan permintaan ke Google Gemini API. AI membantu mengidentifikasi informasi reminder dari teks tersebut.
+
+Contoh hasil pemrosesan:
+
+| Informasi   | Hasil                         |
+| ----------- | ----------------------------- |
+| Aktivitas   | Mengerjakan tugas pemrograman |
+| Tanggal     | Besok                         |
+| Waktu       | 07.00                         |
+| Pengulangan | Tidak ada                     |
+
+Hasil pemrosesan kemudian dikembalikan melalui backend/API menuju aplikasi mobile.
+
+### 3.5.4 Output
+
+Output modul berupa data hasil pemrosesan AI yang terdiri dari:
+
+* aktivitas;
+* tanggal;
+* waktu;
+* pengulangan apabila tersedia.
+
+Data tersebut ditampilkan dalam bentuk preview kepada pengguna.
+
+### 3.5.5 Alur Modul
+
+```text
+Teks Pengguna
+      |
+      v
+Mobile Application
+      |
+      v
+Backend / API
+      |
+      v
+Google Gemini API
+      |
+      v
+Hasil Pemrosesan AI
+      |
+      v
+Backend / API
+      |
+      v
+Mobile Application
+      |
+      v
+Preview Reminder
+```
+
+### 3.5.6 Konfirmasi Hasil AI
+
+Hasil pemrosesan AI tidak langsung disimpan sebagai reminder aktif.
+
+Pengguna harus memeriksa hasil yang diberikan oleh AI. Jika terdapat informasi yang tidak sesuai, pengguna dapat melakukan perubahan.
+
+Apabila informasi sudah benar, pengguna memberikan konfirmasi untuk menyimpan reminder.
+
+```text
+Preview AI
+    |
+    v
+Periksa Data
+    |
+    v
+Data Sudah Benar?
+    |
+    +---- Tidak ----> Edit Data
+    |                    |
+    |                    v
+    |               Preview Kembali
+    |
+    +---- Ya -------> Konfirmasi
+                         |
+                         v
+                  Simpan Reminder
+```
+
+### 3.5.7 Penanganan Kegagalan AI
+
+Apabila layanan Google Gemini API tidak tersedia atau gagal memproses input, sistem menampilkan pesan kesalahan kepada pengguna.
+
+Kegagalan layanan AI tidak mengganggu fungsi utama aplikasi. Pengguna tetap dapat membuat reminder secara manual.
+
+```text
+Input Pengguna
+      |
+      v
+Pemrosesan AI
+      |
+      v
+   Berhasil?
+    /     \
+  Tidak    Ya
+   |        |
+   v        v
+Pesan     Preview
+Error       AI
+   |
+   v
+Reminder Manual
+```
+
+---
+
+## 3.6 Modul Kategori
+
+Modul Kategori digunakan untuk mengelompokkan reminder berdasarkan jenis aktivitas.
+
+Kategori membantu pengguna mengorganisasi reminder dan mempermudah pengguna ketika melihat atau mencari reminder.
+
+### 3.6.1 Fungsi Modul
+
+Fungsi Modul Kategori meliputi:
+
+* memberikan kategori pada reminder;
+* menyimpan kategori reminder;
+* menampilkan kategori reminder;
+* mengelompokkan reminder berdasarkan kategori.
+
+### 3.6.2 Daftar Kategori
+
+Kategori yang tersedia pada sistem adalah:
+
+| Kategori  | Contoh Aktivitas         |
+| --------- | ------------------------ |
+| Kuliah    | Jadwal kuliah            |
+| Tugas     | Mengerjakan tugas        |
+| Pribadi   | Aktivitas pribadi        |
+| Kesehatan | Minum obat atau olahraga |
+| Pekerjaan | Rapat atau pekerjaan     |
+| Lainnya   | Aktivitas lain           |
+
+### 3.6.3 Proses
+
+Ketika pengguna membuat atau mengubah reminder, pengguna dapat memilih kategori yang sesuai.
+
+Kategori kemudian disimpan bersama data reminder.
+
+### 3.6.4 Alur Modul
+
+```text
+Reminder
+    |
+    v
+Pilih Kategori
+    |
+    +---- Kuliah
+    +---- Tugas
+    +---- Pribadi
+    +---- Kesehatan
+    +---- Pekerjaan
+    +---- Lainnya
+    |
+    v
+Simpan Reminder
+```
+
+---
+
+## 3.7 Modul Riwayat Reminder
+
+Modul Riwayat Reminder digunakan untuk mencatat dan menampilkan reminder yang telah selesai atau terlewat.
+
+Modul ini memberikan informasi kepada pengguna mengenai aktivitas reminder yang telah terjadi.
+
+### 3.7.1 Fungsi Modul
+
+Fungsi Modul Riwayat Reminder meliputi:
+
+* mencatat reminder yang selesai;
+* mencatat reminder yang terlewat;
+* menampilkan daftar riwayat;
+* menampilkan status reminder;
+* menyimpan waktu pencatatan riwayat.
+
+### 3.7.2 Data Riwayat
+
+Data yang digunakan dalam riwayat meliputi:
+
+| Data             | Keterangan                  |
+| ---------------- | --------------------------- |
+| ID Riwayat       | Identitas data riwayat      |
+| ID Reminder      | Referensi reminder          |
+| Status           | Status reminder             |
+| Waktu Selesai    | Waktu reminder diselesaikan |
+| Waktu Terlewat   | Waktu reminder terlewat     |
+| Waktu Pencatatan | Waktu data riwayat dibuat   |
+
+### 3.7.3 Proses
+
+Ketika reminder selesai atau terlewat, sistem memperbarui status reminder dan mencatat informasi tersebut ke dalam riwayat.
+
+```text
+Reminder
+    |
+    v
+Waktu Reminder Tiba
+    |
+    v
+Status Reminder
+    |
+    +---- Selesai ----> Simpan ke Riwayat
+    |
+    +---- Terlewat ---> Simpan ke Riwayat
+```
+
+### 3.7.4 Output
+
+Output modul berupa daftar riwayat reminder yang dapat dilihat oleh pengguna.
+
+Riwayat menampilkan informasi mengenai reminder yang telah selesai maupun reminder yang terlewat.
+
+---
+
+## 3.8 Modul Pencarian
+
+Modul Pencarian digunakan untuk membantu pengguna menemukan reminder tertentu berdasarkan kata kunci.
+
+Modul ini digunakan ketika pengguna memiliki banyak reminder sehingga pencarian secara manual menjadi kurang efektif.
+
+### 3.8.1 Fungsi Modul
+
+Fungsi Modul Pencarian meliputi:
+
+* menerima kata kunci;
+* mencari reminder berdasarkan kata kunci;
+* menampilkan hasil pencarian;
+* membantu pengguna menemukan reminder berdasarkan kategori.
+
+### 3.8.2 Input
+
+Input modul berupa kata kunci pencarian yang dimasukkan pengguna.
+
+Contoh:
+
+```text
+tugas
+```
+
+### 3.8.3 Proses
+
+Sistem menerima kata kunci dan melakukan pencocokan terhadap data reminder milik pengguna.
+
+Alur proses:
+
+```text
+Pengguna
+    |
+    v
+Masukkan Kata Kunci
+    |
+    v
+Modul Pencarian
+    |
+    v
+Data Reminder Pengguna
+    |
+    v
+Pencocokan Kata Kunci
+    |
+    v
+Hasil Pencarian
+```
+
+### 3.8.4 Output
+
+Output berupa daftar reminder yang sesuai dengan kata kunci pencarian.
+
+Apabila tidak terdapat reminder yang sesuai, sistem menampilkan informasi bahwa reminder yang dicari tidak ditemukan.
+
+---
+
+## 3.9 Modul Pengaturan
+
+Modul Pengaturan digunakan untuk mengelola preferensi pengguna yang berkaitan dengan notifikasi, suara, getaran, dan snooze.
+
+Pengaturan digunakan sebagai konfigurasi yang menentukan perilaku sistem ketika memberikan notifikasi reminder.
+
+### 3.9.1 Fungsi Modul
+
+Fungsi Modul Pengaturan meliputi:
+
+* mengatur status notifikasi;
+* mengatur suara notifikasi atau alarm;
+* mengatur getaran;
+* mengatur durasi snooze default;
+* menyimpan pengaturan pengguna.
+
+### 3.9.2 Pengaturan Notifikasi
+
+Pengguna dapat mengatur status notifikasi aplikasi.
+
+Pilihan yang tersedia:
+
+* aktif;
+* nonaktif.
+
+```text
+Notifikasi
+    |
+    +---- Aktif
+    |
+    +---- Nonaktif
+```
+
+Apabila notifikasi aktif dan izin notifikasi pada perangkat diberikan, sistem dapat memberikan notifikasi sesuai jadwal reminder.
+
+### 3.9.3 Pengaturan Suara
+
+Pengguna dapat mengatur penggunaan suara pada notifikasi atau alarm reminder.
+
+Pengaturan ini digunakan oleh sistem ketika reminder telah mencapai waktu yang ditentukan.
+
+### 3.9.4 Pengaturan Getaran
+
+Pengguna dapat menentukan apakah perangkat menggunakan getaran ketika memberikan notifikasi reminder.
+
+```text
+Getaran
+    |
+    +---- Aktif
+    |
+    +---- Nonaktif
+```
+
+### 3.9.5 Pengaturan Snooze
+
+Pengguna dapat menentukan durasi snooze default.
+
+Durasi tersebut digunakan ketika pengguna memilih tindakan snooze pada notifikasi reminder.
+
+### 3.9.6 Alur Modul
+
+```text
+Pengguna
+    |
+    v
+Halaman Pengaturan
+    |
+    +---- Status Notifikasi
+    |
+    +---- Suara
+    |
+    +---- Getaran
+    |
+    +---- Durasi Snooze
+    |
+    v
+Simpan Pengaturan
+    |
+    v
+Konfigurasi Digunakan Sistem
+```
+
+Pengaturan yang telah disimpan akan digunakan oleh sistem pada proses notifikasi dan pengelolaan reminder berikutnya.
