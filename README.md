@@ -163,3 +163,6 @@ Tanggal, Waktu, Pengulangan
      Reminder Ditampilkan
             ↓
 Selesai / Snooze / Terlewat
+
+## CONTROLING WORK
+[Buka Spreadsheet Controling Work](https://docs.google.com/spreadsheets/d/1WhWnzT9Gy6BpvVMmNNfOIT7bykbvL7h-UR7XL2mpLXs/edit?usp=sharing)  
