@@ -163,6 +163,7 @@ Tanggal, Waktu, Pengulangan
      Reminder Ditampilkan
             ↓
 Selesai / Snooze / Terlewat
+```
 
 ## CONTROLING WORK
 
