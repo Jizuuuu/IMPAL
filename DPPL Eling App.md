@@ -1124,3 +1124,526 @@ Konfigurasi Digunakan Sistem
 ```
 
 Pengaturan yang telah disimpan akan digunakan oleh sistem pada proses notifikasi dan pengelolaan reminder berikutnya.
+
+---
+# 5. Perancangan Antarmuka
+ 
+## 5.1 Prinsip Perancangan Antarmuka
+ 
+Perancangan antarmuka Eling dilakukan menggunakan Figma, mulai dari wireframe, prototype, style guide, hingga komponen antarmuka. Perancangan mengikuti kebutuhan antarmuka pada SKPL (Bagian 3.1.1) dan kebutuhan nonfungsional kegunaan serta konsistensi (SKPL-NF-001, SKPL-NF-002, SKPL-NF-003, dan SKPL-NF-014).
+ 
+Prinsip yang digunakan:
+ 
+- **Sederhana**, sehingga pengguna tanpa kemampuan teknis khusus dapat menggunakan aplikasi;
+- **Konsisten**, dengan istilah, tombol, dan navigasi yang sama pada seluruh halaman;
+- **Langkah minimal**, terutama pada pembuatan reminder;
+- **Umpan balik jelas**, dengan indikator proses pada Speech-to-Text dan pemrosesan AI serta pesan kesalahan yang jelas saat terjadi kegagalan;
+- **Kontrol berada pada pengguna**, karena hasil AI selalu ditampilkan sebagai preview dan baru disimpan setelah dikonfirmasi;
+- **Reminder manual tetap tersedia**, apabila Speech-to-Text atau layanan AI tidak dapat digunakan.
+Daftar halaman pada SKPL dan penjelasannya dalam dokumen ini:
+ 
+| Halaman | Penjelasan |
+| --- | --- |
+| Login | 5.2 |
+| Registrasi | 5.3 |
+| Utama, Daftar Reminder, Pencarian, Kategori | 5.4 |
+| Tambah Reminder dan Edit Reminder | 5.5 |
+| Input Suara | 5.6 |
+| Preview Hasil AI | 5.7 |
+| Detail Reminder | 5.8 |
+| Riwayat Reminder | 5.9 |
+| Profil dan Pengaturan Notifikasi | 5.10 |
+ 
+Halaman daftar reminder, pencarian, dan kategori dijelaskan bersama halaman utama karena ketiganya berkaitan dengan penampilan dan penyaringan daftar reminder. Halaman edit reminder menggunakan isian yang sama dengan halaman tambah reminder. Halaman profil dijelaskan bersama pengaturan.
+ 
+Alur navigasi utama:
+ 
+```mermaid
+flowchart TD
+    Login["Login"] --> Utama["Halaman Utama"]
+    Login --> Registrasi["Registrasi"]
+    Registrasi --> Login
+    Utama --> Tambah["Tambah Reminder"]
+    Utama --> Detail["Detail Reminder"]
+    Utama --> Riwayat["Riwayat"]
+    Utama --> Pengaturan["Pengaturan dan Profil"]
+    Tambah --> Suara["Input Suara"]
+    Suara --> Preview["Preview AI"]
+    Preview --> Utama
+    Tambah --> Utama
+    Detail --> Tambah
+```
+ 
+Pada diagram, tanda panah dari Detail Reminder ke Tambah Reminder menggambarkan proses ubah reminder yang menggunakan formulir yang sama.
+ 
+## 5.2 Halaman Login
+ 
+**Tujuan:** memungkinkan pengguna yang sudah memiliki akun masuk ke aplikasi (UC-01).
+ 
+**Elemen antarmuka:**
+ 
+- isian email;
+- isian kata sandi;
+- tombol Login;
+- tautan menuju halaman Registrasi;
+- area pesan kesalahan.
+**Perilaku:**
+ 
+- apabila data valid dan autentikasi berhasil, pengguna diarahkan ke Halaman Utama;
+- apabila data kosong atau autentikasi gagal, aplikasi menampilkan pesan kesalahan yang jelas.
+**Kebutuhan terkait:** SKPL-F-002, SKPL-F-003, SKPL-NF-016.
+ 
+## 5.3 Halaman Registrasi
+ 
+**Tujuan:** memungkinkan pengguna baru membuat akun (UC-01).
+ 
+**Elemen antarmuka:**
+ 
+- isian nama;
+- isian email;
+- isian kata sandi;
+- tombol Registrasi;
+- tautan kembali ke halaman Login;
+- area pesan kesalahan.
+**Perilaku:**
+ 
+- aplikasi memvalidasi isian sebelum dikirim ke layanan autentikasi;
+- apabila registrasi berhasil, pengguna dapat melanjutkan ke aplikasi atau halaman Login;
+- apabila gagal, aplikasi menampilkan pesan kesalahan.
+**Kebutuhan terkait:** SKPL-F-001, SKPL-NF-015, SKPL-NF-016.
+ 
+## 5.4 Halaman Utama
+ 
+**Tujuan:** menjadi pusat navigasi dan menampilkan daftar reminder milik pengguna (UC-04, UC-14, UC-16).
+ 
+**Elemen antarmuka:**
+ 
+- daftar reminder yang menampilkan judul, tanggal, waktu, dan kategori;
+- kolom pencarian berdasarkan kata kunci;
+- pilihan kategori (Kuliah, Tugas, Pribadi, Kesehatan, Pekerjaan, dan Lainnya) untuk menyaring daftar;
+- tombol tambah reminder;
+- akses navigasi ke Riwayat dan Pengaturan.
+**Perilaku:**
+ 
+- hanya reminder milik pengguna yang sedang login yang ditampilkan;
+- memilih salah satu reminder membuka Halaman Detail Reminder;
+- memasukkan kata kunci atau memilih kategori menyaring daftar sesuai pilihan;
+- apabila tidak ada reminder, aplikasi menampilkan keadaan kosong.
+**Kebutuhan terkait:** SKPL-F-003, SKPL-F-012, SKPL-F-042, SKPL-F-043, SKPL-F-038, SKPL-F-039.
+ 
+## 5.5 Halaman Tambah Reminder
+ 
+**Tujuan:** memungkinkan pengguna membuat reminder secara manual (UC-03, UC-07, UC-14). Halaman yang sama digunakan untuk mengubah reminder yang sudah ada (UC-05).
+ 
+**Elemen antarmuka:**
+ 
+- isian judul atau aktivitas;
+- pemilih tanggal;
+- pemilih waktu;
+- pemilih kategori;
+- pilihan pengulangan: sekali, setiap hari, hari kerja, mingguan, atau pengulangan tertentu;
+- tombol input suara menuju Halaman Input Suara;
+- tombol Simpan;
+- tombol Batal.
+**Perilaku:**
+ 
+- aplikasi memvalidasi data (judul, tanggal, dan waktu) sebelum disimpan;
+- apabila valid, reminder disimpan dan alarm atau notifikasi dijadwalkan;
+- pada mode ubah, isian terisi dengan data reminder yang ada;
+- apabila penyimpanan gagal, aplikasi menampilkan pesan kesalahan.
+**Kebutuhan terkait:** SKPL-F-006 s.d. SKPL-F-011, SKPL-F-013, SKPL-F-014, SKPL-F-038, SKPL-NF-015.
+ 
+## 5.6 Halaman Input Suara
+ 
+**Tujuan:** memungkinkan pengguna membuat reminder dengan suara (UC-11).
+ 
+**Elemen antarmuka:**
+ 
+- tombol mikrofon untuk memulai dan menghentikan perekaman;
+- indikator proses ketika suara sedang diproses;
+- area teks hasil transkripsi yang dapat diubah pengguna;
+- tombol Proses dengan AI untuk mengirim teks ke AI Reminder Assistant;
+- tombol kembali ke pembuatan reminder manual;
+- area pesan kesalahan.
+**Perilaku:**
+ 
+- aplikasi meminta izin mikrofon apabila belum diberikan;
+- hasil transkripsi ditampilkan sehingga dapat diperiksa dan diperbaiki sebelum dikirim ke AI;
+- apabila Speech-to-Text gagal atau memakan waktu terlalu lama, aplikasi menampilkan pesan kesalahan;
+- apabila layanan AI gagal, aplikasi menampilkan pesan kesalahan dan pengguna tetap dapat membuat reminder secara manual.
+**Kebutuhan terkait:** SKPL-F-023 s.d. SKPL-F-027, SKPL-F-028, SKPL-F-036, SKPL-F-037, SKPL-NF-005, SKPL-NF-006.
+ 
+## 5.7 Halaman Preview AI
+ 
+**Tujuan:** menampilkan hasil pemrosesan AI sebelum disimpan dan meminta konfirmasi pengguna (UC-12, UC-13).
+ 
+**Elemen antarmuka:**
+ 
+- teks input pengguna sebagai acuan;
+- isian aktivitas atau judul hasil pengenalan AI;
+- isian tanggal;
+- isian waktu;
+- isian pengulangan;
+- pemilih kategori;
+- tombol Konfirmasi dan Simpan;
+- tombol Batal.
+**Perilaku:**
+ 
+- seluruh isian dapat diubah pengguna sebelum disimpan;
+- apabila AI tidak mengenali sebagian informasi, isian terkait dapat dilengkapi pengguna;
+- reminder tidak disimpan sebagai reminder aktif sebelum pengguna menekan tombol konfirmasi;
+- setelah konfirmasi, reminder disimpan, alarm atau notifikasi dijadwalkan, dan pengguna kembali ke Halaman Utama.
+**Kebutuhan terkait:** SKPL-F-029 s.d. SKPL-F-035, SKPL-F-038.
+ 
+## 5.8 Halaman Detail Reminder
+ 
+**Tujuan:** menampilkan informasi lengkap sebuah reminder dan menyediakan tindakan terhadapnya (UC-04, UC-05, UC-06, UC-10).
+ 
+**Elemen antarmuka:**
+ 
+- judul atau aktivitas;
+- tanggal dan waktu;
+- kategori;
+- informasi pengulangan;
+- status reminder;
+- tombol Ubah, yang membuka formulir pada Halaman Tambah Reminder;
+- tombol Hapus, dengan konfirmasi sebelum penghapusan;
+- tombol Tandai Selesai.
+**Perilaku:**
+ 
+- menandai reminder selesai memperbarui statusnya dan mencatatnya pada riwayat;
+- menghapus reminder membatalkan jadwal notifikasinya.
+**Notifikasi pengingat:** ketika waktu reminder tiba, notifikasi pada perangkat menampilkan aktivitas reminder dengan pilihan tindakan Snooze dan Selesai (UC-08, UC-09, UC-10). Durasi snooze mengikuti pengaturan pengguna.
+ 
+**Kebutuhan terkait:** SKPL-F-010, SKPL-F-011, SKPL-F-015, SKPL-F-016 s.d. SKPL-F-021.
+ 
+## 5.9 Halaman Riwayat
+ 
+**Tujuan:** menampilkan reminder yang telah selesai atau terlewat (UC-15).
+ 
+**Elemen antarmuka:**
+ 
+- daftar reminder berstatus selesai atau terlewat;
+- keterangan status pada setiap reminder;
+- tanggal dan waktu reminder.
+**Perilaku:**
+ 
+- status reminder dicatat pada riwayat ketika reminder selesai atau terlewat;
+- hanya riwayat milik pengguna yang sedang login yang ditampilkan.
+**Kebutuhan terkait:** SKPL-F-021, SKPL-F-040, SKPL-F-041.
+ 
+## 5.10 Halaman Pengaturan
+ 
+**Tujuan:** memungkinkan pengguna mengatur notifikasi dan mengelola profil (UC-02, UC-17).
+ 
+**Elemen antarmuka:**
+ 
+- pengaturan status notifikasi (aktif atau nonaktif);
+- pengaturan suara notifikasi atau alarm;
+- pengaturan getaran;
+- pengaturan durasi snooze default;
+- informasi profil (nama dan email) beserta tombol ubah profil;
+- tombol Logout.
+**Perilaku:**
+ 
+- perubahan pengaturan disimpan dan digunakan pada penjadwalan notifikasi berikutnya;
+- pengguna hanya dapat melihat dan mengubah profil miliknya sendiri.
+**Kebutuhan terkait:** SKPL-F-002, SKPL-F-004, SKPL-F-005, SKPL-F-019, SKPL-F-044 s.d. SKPL-F-048.
+ 
+---
+ 
+# 7. Perancangan Integrasi AI
+ 
+## 7.1 Tujuan Integrasi AI
+ 
+Integrasi AI pada Eling menggunakan **Google Gemini API** pada fitur **AI Reminder Assistant**. Tujuannya adalah membantu pengguna membuat reminder dari input bahasa natural, sehingga pengguna tidak perlu mengisi aktivitas, tanggal, waktu, dan pengulangan satu per satu.
+ 
+Contoh input pengguna:
+ 
+> "Besok jam 7 pagi ingatkan saya untuk mengerjakan tugas pemrograman."
+ 
+AI hanya berperan **memahami input pengguna**. Hal-hal berikut tetap dikendalikan oleh sistem:
+ 
+- validasi data reminder;
+- penyimpanan data;
+- pengaturan alarm dan notifikasi;
+- perubahan dan penghapusan reminder;
+- pengelolaan status dan riwayat reminder.
+Batasan integrasi AI (sesuai SKPL Bagian 1.2 dan 2.5):
+ 
+- AI tidak melakukan analisis produktivitas atau pola kebiasaan pengguna;
+- AI tidak memberikan rekomendasi atau prediksi aktivitas;
+- hasil AI tidak langsung menjadi reminder aktif, dan hanya disimpan setelah pengguna memberikan konfirmasi;
+- reminder manual tetap dapat digunakan tanpa AI.
+## 7.2 Input AI
+ 
+Input yang diproses AI adalah **teks reminder dari pengguna**. Teks dapat berasal dari dua sumber:
+ 
+1. hasil Speech-to-Text yang telah diperiksa atau diubah pengguna (Bab 8);
+2. teks yang diketik langsung oleh pengguna.
+Ketentuan input:
+ 
+- aplikasi mengirim teks input ke backend/API, kemudian backend meneruskannya ke Google Gemini API;
+- ekspresi waktu relatif seperti "besok" memerlukan tanggal dan waktu saat ini sebagai acuan, sehingga sistem menyertakan informasi tersebut pada permintaan (tanggal dan waktu pada perangkat diasumsikan benar, sesuai SKPL Bagian 2.6);
+- data yang dikirim dibatasi pada informasi yang diperlukan untuk memproses reminder dan tidak menyertakan data pribadi lain seperti email atau kata sandi (SKPL-NF-012 dan SKPL Bagian 3.1.4);
+- teks input yang kosong tidak dikirim ke AI dan aplikasi meminta pengguna mengisi input terlebih dahulu.
+## 7.3 Output AI
+ 
+Output AI berupa informasi reminder yang dikenali dari teks input:
+ 
+| Informasi | Keterangan | Kebutuhan SKPL |
+| --- | --- | --- |
+| Aktivitas atau judul | Kegiatan yang harus diingat. | SKPL-F-029 |
+| Tanggal | Tanggal reminder, apabila tersedia pada teks. | SKPL-F-030 |
+| Waktu | Waktu reminder, apabila tersedia pada teks. | SKPL-F-031 |
+| Pengulangan | Pola pengulangan reminder, apabila tersedia. | SKPL-F-032 |
+ 
+Informasi yang tidak terdapat pada teks input dikembalikan kosong dan tidak ditebak oleh AI. Pengguna melengkapinya pada halaman Preview AI (Bagian 5.7). Kategori tidak termasuk output AI dan dipilih oleh pengguna.
+ 
+Output AI ditampilkan sebagai preview. Sistem tidak menyimpannya sebagai reminder aktif sebelum pengguna memberikan konfirmasi (SKPL-F-033, SKPL-F-034, dan SKPL-F-035).
+ 
+## 7.4 Format Data AI
+ 
+Backend meminta AI mengembalikan hasil dalam format JSON agar dapat diproses oleh aplikasi.
+ 
+**Permintaan dari aplikasi ke backend:**
+ 
+```json
+{
+  "text": "Besok jam 7 pagi ingatkan saya untuk mengerjakan tugas pemrograman",
+  "current_datetime": "2027-01-17T20:00:00"
+}
+```
+ 
+**Respons dari backend ke aplikasi:**
+ 
+```json
+{
+  "status": "success",
+  "result": {
+    "title": "Mengerjakan tugas pemrograman",
+    "date": "2027-01-18",
+    "time": "07:00",
+    "repeat": "sekali"
+  }
+}
+```
+ 
+Contoh di atas mengasumsikan tanggal pengguna saat input adalah 17-01-2027, sehingga "besok" dikenali sebagai 18-01-2027 sesuai contoh pada README.
+ 
+Ketentuan format:
+ 
+| Field | Tipe | Keterangan |
+| --- | --- | --- |
+| `title` | teks | Aktivitas atau judul reminder. Bernilai `null` apabila tidak dikenali. |
+| `date` | teks (YYYY-MM-DD) | Tanggal reminder. Bernilai `null` apabila tidak tersedia pada input. |
+| `time` | teks (HH:MM) | Waktu reminder. Bernilai `null` apabila tidak tersedia pada input. |
+| `repeat` | teks | Salah satu pilihan pengulangan pada SKPL-F-014: `sekali`, `setiap hari`, `hari kerja`, `mingguan`, atau pengulangan tertentu. Input tanpa pengulangan bernilai `sekali`. |
+ 
+Sebelum ditampilkan sebagai preview, hasil AI diperiksa terhadap format di atas. Hasil yang tidak sesuai format diperlakukan sebagai kegagalan pemrosesan (Bagian 7.6).
+ 
+## 7.5 Alur Integrasi AI
+ 
+```mermaid
+flowchart TD
+    A["Teks input pengguna"] --> B["Aplikasi mengirim teks ke Backend/API"]
+    B --> C["Backend meneruskan permintaan ke Google Gemini API"]
+    C --> D{"Respons berhasil dan sesuai format?"}
+    D -->|Tidak| E["Kembalikan pesan kesalahan ke aplikasi"]
+    E --> F["Aplikasi menampilkan pesan kesalahan"]
+    F --> G["Pengguna membuat reminder manual atau mencoba kembali"]
+    D -->|Ya| H["Backend mengirim hasil ke aplikasi"]
+    H --> I["Aplikasi menampilkan Preview Reminder"]
+    I --> J["Pengguna memeriksa dan mengubah data"]
+    J --> K{"Pengguna konfirmasi?"}
+    K -->|Batal| L["Hasil AI dibuang, tidak disimpan"]
+    K -->|Konfirmasi| M["Reminder disimpan"]
+    M --> N["Alarm atau notifikasi dijadwalkan"]
+```
+ 
+Pada alur ini:
+ 
+- kredensial Google Gemini API hanya digunakan pada backend dan tidak disimpan pada aplikasi mobile (SKPL-NF-011);
+- aplikasi menampilkan indikator proses selama permintaan berlangsung (SKPL-NF-005);
+- penyimpanan reminder hanya terjadi setelah konfirmasi pengguna.
+## 7.6 Penanganan Kesalahan AI
+ 
+| Kondisi | Penanganan |
+| --- | --- |
+| Tidak ada koneksi internet | Aplikasi menampilkan pesan bahwa fitur AI membutuhkan koneksi internet. |
+| Layanan Google Gemini API tidak tersedia atau gagal | Aplikasi menampilkan pesan kesalahan (SKPL-F-036). |
+| Pemrosesan melebihi batas waktu | Aplikasi menghentikan indikator proses dan menampilkan pesan kesalahan (SKPL-NF-006). |
+| Respons tidak sesuai format | Hasil tidak ditampilkan sebagai preview, dan aplikasi menampilkan pesan bahwa input tidak dapat diproses. |
+| Sebagian informasi tidak dikenali | Preview tetap ditampilkan dengan isian terkait kosong agar dapat dilengkapi pengguna. |
+ 
+Pada seluruh kondisi di atas:
+ 
+- tidak ada reminder yang tersimpan tanpa konfirmasi pengguna;
+- teks input pengguna tetap dapat digunakan kembali untuk mencoba ulang;
+- pengguna tetap dapat membuat reminder secara manual (SKPL-F-037 dan SKPL-NF-008);
+- pesan kesalahan disampaikan dengan jelas (SKPL-NF-016).
+---
+ 
+# 8. Perancangan Speech-to-Text
+ 
+## 8.1 Tujuan
+ 
+Fitur Speech-to-Text memungkinkan pengguna membuat reminder menggunakan suara tanpa mengetik secara manual. Suara pengguna diubah menjadi teks, kemudian teks tersebut dapat diteruskan ke AI Reminder Assistant (Bab 7).
+ 
+Contoh penggunaan:
+ 
+> Pengguna mengatakan: "Jam 8 malam ingatkan saya untuk mengerjakan laporan."
+ 
+## 8.2 Teknologi dan Integrasi
+ 
+- **Teknologi:** layanan Speech-to-Text API/Service yang kompatibel dengan perangkat mobile;
+- **Integrasi:** langsung pada aplikasi Flutter, sesuai alur pada Gambaran Umum Arsitektur (Bagian 2.1) yang menunjukkan aplikasi mobile berkomunikasi dengan layanan Speech-to-Text;
+- **Perangkat keras:** mikrofon pada perangkat;
+- **Koneksi:** internet diperlukan (SKPL Bagian 2.4).
+Layanan atau pustaka Speech-to-Text yang digunakan, serta bahasa pengenalan suara, ditentukan pada tahap implementasi sesuai kompatibilitas dengan Flutter dan perangkat Android.
+ 
+## 8.3 Alur Proses
+ 
+```mermaid
+flowchart TD
+    A["Pengguna membuka Halaman Input Suara"] --> B{"Izin mikrofon sudah diberikan?"}
+    B -->|Belum| C["Aplikasi meminta izin mikrofon"]
+    C --> D{"Izin diberikan?"}
+    D -->|Tidak| E["Tampilkan pesan kesalahan, pengguna dapat membuat reminder manual"]
+    D -->|Ya| F["Pengguna menekan tombol mikrofon dan berbicara"]
+    B -->|Sudah| F
+    F --> G["Suara dikirim ke layanan Speech-to-Text"]
+    G --> H{"Transkripsi berhasil?"}
+    H -->|Tidak| I["Tampilkan pesan kesalahan"]
+    H -->|Ya| J["Tampilkan hasil transkripsi"]
+    J --> K["Pengguna memeriksa atau mengubah teks"]
+    K --> L["Teks dikirim ke AI Reminder Assistant"]
+```
+ 
+## 8.4 Input dan Output
+ 
+| Aspek | Keterangan |
+| --- | --- |
+| Input | Suara pengguna melalui mikrofon perangkat. |
+| Output | Teks hasil transkripsi yang ditampilkan pada Halaman Input Suara. |
+| Tindak lanjut | Teks yang telah diperiksa pengguna dikirim ke AI Reminder Assistant. |
+ 
+Hasil transkripsi **tidak otomatis dikirim ke AI**. Teks ditampilkan terlebih dahulu sehingga pengguna dapat memperbaiki kesalahan pengenalan suara (SKPL-F-025 dan SKPL-F-026).
+ 
+## 8.5 Penanganan Kesalahan
+ 
+| Kondisi | Penanganan |
+| --- | --- |
+| Izin mikrofon ditolak | Aplikasi menampilkan pesan bahwa izin mikrofon diperlukan, dan pengguna dapat membuat reminder manual. |
+| Tidak ada koneksi internet | Aplikasi menampilkan pesan kesalahan. |
+| Suara tidak terdeteksi atau tidak dapat dikenali | Aplikasi menampilkan pesan kesalahan dan pengguna dapat mengulang perekaman. |
+| Proses melebihi batas waktu | Aplikasi menghentikan indikator proses dan menampilkan pesan kesalahan (SKPL-NF-006). |
+ 
+Selama proses berlangsung, aplikasi menampilkan indikator proses (SKPL-NF-005). Kegagalan Speech-to-Text tidak mengganggu pembuatan reminder manual (SKPL-F-027, SKPL-NF-008, dan SKPL-NF-016).
+ 
+## 8.6 Pemetaan Kebutuhan
+ 
+| Kebutuhan SKPL | Rancangan |
+| --- | --- |
+| SKPL-F-023 | Halaman Input Suara (Bagian 5.6) |
+| SKPL-F-024 | Integrasi layanan Speech-to-Text (Bagian 8.2 dan 8.3) |
+| SKPL-F-025, SKPL-F-026 | Penampilan dan pengubahan hasil transkripsi (Bagian 8.4) |
+| SKPL-F-027 | Penanganan kesalahan (Bagian 8.5) |
+ 
+---
+ 
+# 9. Perancangan API
+ 
+## 9.1 Gambaran Umum
+ 
+Komunikasi antara aplikasi Flutter dan backend dilakukan melalui REST API menggunakan HTTPS. Backend menggunakan **Supabase**, yang menyediakan layanan autentikasi, akses data PostgreSQL melalui API, dan pengelolaan akses data pengguna.
+ 
+Rancangan API dibagi menjadi tiga kelompok:
+ 
+1. **API autentikasi**, disediakan oleh Supabase Auth;
+2. **API data**, untuk pengelolaan reminder, kategori, riwayat, pengaturan, dan profil;
+3. **API pemrosesan AI**, untuk meneruskan teks input ke Google Gemini API.
+Speech-to-Text tidak melalui API backend karena diproses langsung oleh aplikasi mobile dengan layanan Speech-to-Text (Bab 8).
+ 
+Nama resource pada bagian ini bersifat logis. Nama tabel, kolom, dan path final mengikuti rancangan basis data (Bab 4) dan implementasi.
+ 
+## 9.2 Autentikasi dan Otorisasi
+ 
+- pengguna melakukan registrasi dan login melalui Supabase Auth;
+- setelah login, aplikasi menerima token akses yang dikirim pada setiap permintaan ke API data dan API pemrosesan AI;
+- permintaan tanpa token yang valid ditolak;
+- akses data dibatasi berdasarkan akun pengguna, sehingga pengguna hanya dapat mengakses data miliknya sendiri (SKPL-F-003 dan SKPL-NF-009);
+- seluruh komunikasi menggunakan HTTPS dan kredensial tidak dikirim dalam bentuk yang tidak aman (SKPL-NF-010).
+## 9.3 Daftar API
+ 
+### 9.3.1 API Autentikasi dan Profil
+ 
+| Operasi | Metode | Resource | Keterangan | SKPL |
+| --- | --- | --- | --- | --- |
+| Registrasi | POST | auth (signup) | Membuat akun dengan nama, email, dan kata sandi. | SKPL-F-001 |
+| Login | POST | auth (login) | Menghasilkan token akses. | SKPL-F-002 |
+| Logout | POST | auth (logout) | Mengakhiri sesi pengguna. | SKPL-F-002 |
+| Melihat profil | GET | profile | Mengambil profil pengguna yang sedang login. | SKPL-F-004, SKPL-F-048 |
+| Mengubah profil | PATCH | profile | Mengubah data profil pengguna yang sedang login. | SKPL-F-005, SKPL-F-048 |
+ 
+### 9.3.2 API Reminder
+ 
+| Operasi | Metode | Resource | Keterangan | SKPL |
+| --- | --- | --- | --- | --- |
+| Membuat reminder | POST | reminders | Menyimpan reminder baru, baik manual maupun hasil konfirmasi AI. | SKPL-F-006 s.d. SKPL-F-009, SKPL-F-013 |
+| Melihat daftar reminder | GET | reminders | Mengambil reminder milik pengguna. | SKPL-F-012 |
+| Melihat detail reminder | GET | reminders/{id} | Mengambil satu reminder. | SKPL-F-015 |
+| Mengubah reminder | PATCH | reminders/{id} | Mengubah data reminder. | SKPL-F-010 |
+| Menghapus reminder | DELETE | reminders/{id} | Menghapus reminder. | SKPL-F-011 |
+| Mengubah status reminder | PATCH | reminders/{id} | Menandai reminder selesai atau terlewat. | SKPL-F-020, SKPL-F-021 |
+| Mencari reminder | GET | reminders | Penyaringan berdasarkan kata kunci. | SKPL-F-042 |
+| Menyaring berdasarkan kategori | GET | reminders | Penyaringan berdasarkan kategori. | SKPL-F-043 |
+ 
+### 9.3.3 API Kategori, Riwayat, dan Pengaturan
+ 
+| Operasi | Metode | Resource | Keterangan | SKPL |
+| --- | --- | --- | --- | --- |
+| Melihat kategori | GET | categories | Mengambil daftar kategori. | SKPL-F-039 |
+| Melihat riwayat | GET | reminder history | Mengambil reminder berstatus selesai atau terlewat. | SKPL-F-040, SKPL-F-041 |
+| Mencatat riwayat | POST | reminder history | Mencatat status selesai atau terlewat. | SKPL-F-021, SKPL-F-041 |
+| Melihat pengaturan | GET | settings | Mengambil pengaturan notifikasi pengguna. | SKPL-F-044 s.d. SKPL-F-047 |
+| Mengubah pengaturan | PATCH | settings | Mengubah status notifikasi, suara, getaran, dan durasi snooze. | SKPL-F-044 s.d. SKPL-F-047 |
+ 
+### 9.3.4 API Pemrosesan AI
+ 
+| Operasi | Metode | Resource | Keterangan | SKPL |
+| --- | --- | --- | --- | --- |
+| Memproses teks reminder | POST | AI processing | Menerima teks input, meneruskannya ke Google Gemini API, dan mengembalikan hasil pengenalan reminder. | SKPL-F-028 s.d. SKPL-F-032 |
+ 
+Permintaan dan respons API ini mengikuti format pada Bagian 7.4. API ini **hanya mengembalikan hasil untuk preview** dan tidak menyimpan reminder. Penyimpanan dilakukan melalui API Reminder setelah pengguna memberikan konfirmasi (SKPL-F-035).
+ 
+## 9.4 Format Respons Kesalahan
+ 
+Setiap kegagalan dikembalikan dengan kode status HTTP yang sesuai dan pesan yang dapat ditampilkan aplikasi.
+ 
+| Kondisi | Kode Status HTTP | Penanganan Aplikasi |
+| --- | --- | --- |
+| Data tidak valid | 400 | Menampilkan pesan validasi. |
+| Token tidak valid atau tidak ada | 401 | Mengarahkan pengguna ke halaman Login. |
+| Akses ke data milik pengguna lain | 403 | Menampilkan pesan bahwa akses ditolak. |
+| Data tidak ditemukan | 404 | Menampilkan pesan data tidak ditemukan. |
+| Layanan AI gagal atau tidak tersedia | 5xx | Menampilkan pesan kesalahan AI dan menawarkan reminder manual. |
+ 
+Contoh respons kesalahan:
+ 
+```json
+{
+  "status": "error",
+  "message": "Layanan AI tidak tersedia. Silakan buat reminder secara manual."
+}
+```
+ 
+Pesan kesalahan ditampilkan secara jelas kepada pengguna sesuai SKPL-NF-016.
+ 
+## 9.5 Ketentuan Penggunaan API
+ 
+- API data hanya mengembalikan data milik pengguna yang sedang login;
+- data reminder divalidasi sebelum disimpan (SKPL-NF-015);
+- API key layanan AI hanya berada pada sisi backend (SKPL-NF-011);
+- data yang diteruskan ke layanan AI dibatasi pada kebutuhan pemrosesan reminder (SKPL-NF-012);
+- kegagalan API pemrosesan AI tidak mempengaruhi API Reminder sehingga reminder manual tetap dapat dibuat (SKPL-NF-008).
