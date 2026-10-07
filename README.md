@@ -70,3 +70,96 @@ Tim pengembang aplikasi ini terdiri dari mahasiswa, sehingga faktor kepraktisan 
 - **Tools:** Figma
 - **Justifikasi:** Figma digunakan untuk merancang tampilan dan pengalaman pengguna aplikasi Eling, mulai dari wireframe, prototype, style guide, hingga komponen antarmuka. Perancangan dilakukan terlebih dahulu agar struktur navigasi dan tampilan setiap halaman dapat ditentukan sebelum masuk ke tahap implementasi aplikasi.
 
+### B. Mobile Application
+
+- **Framework:** Flutter
+- **Bahasa Pemrograman:** Dart
+- **Justifikasi:** Flutter digunakan sebagai framework utama untuk membangun aplikasi mobile Eling. Flutter memungkinkan tim mengembangkan antarmuka aplikasi secara terstruktur menggunakan satu basis kode. Dart digunakan sebagai bahasa pemrograman utama karena merupakan bahasa yang digunakan oleh Flutter dan mendukung pengembangan aplikasi mobile dengan baik.
+
+Flutter juga memudahkan pembuatan komponen antarmuka yang konsisten serta mendukung integrasi dengan berbagai layanan seperti API, notifikasi lokal, mikrofon, dan layanan Speech-to-Text.
+
+### C. Backend & REST API
+
+- **Backend:** Supabase
+- **API:** REST API
+- **Justifikasi:** Supabase digunakan sebagai backend untuk menyediakan layanan basis data, autentikasi, serta akses data melalui API. Penggunaan Supabase membantu mengurangi kompleksitas pembangunan backend sehingga tim dapat lebih fokus pada pengembangan fitur utama aplikasi.
+
+Komunikasi antara aplikasi Flutter dengan layanan backend dilakukan melalui API sehingga proses pengelolaan data pengguna dan reminder dapat dilakukan secara terstruktur.
+
+### D. Basis Data
+
+- **Database:** PostgreSQL
+- **Platform:** Supabase
+- **Justifikasi:** PostgreSQL digunakan sebagai basis data utama untuk menyimpan data pengguna, reminder, kategori, riwayat reminder, serta pengaturan pengguna. PostgreSQL dipilih karena memiliki struktur basis data relasional yang sesuai untuk mengelola hubungan antara pengguna dengan reminder dan data pendukung lainnya. Supabase menyediakan PostgreSQL sebagai layanan basis data sehingga pengelolaan database dapat dilakukan secara terintegrasi dengan backend aplikasi.
+
+### E. Autentikasi
+
+- **Authentication:** Supabase Auth
+- **Justifikasi:** Supabase Auth digunakan untuk menangani proses registrasi, login, logout, serta autentikasi pengguna. Penggunaan layanan autentikasi ini membantu memastikan bahwa data reminder hanya dapat diakses oleh pengguna yang memiliki hak akses terhadap data tersebut.
+
+### F. Kecerdasan Buatan (AI Engine)
+
+- **LLM API:** Google Gemini API
+- **Integrasi:** Aplikasi Eling melalui backend/API
+- **Justifikasi:** Google Gemini API digunakan pada fitur **AI Reminder Assistant** sebagai fitur pendukung dalam proses pembuatan reminder.
+
+Pengguna dapat memberikan input dalam bentuk bahasa natural, misalnya:
+
+> "Besok jam 7 pagi ingatkan saya untuk mengerjakan tugas pemrograman."
+
+AI kemudian membantu mengidentifikasi informasi yang terdapat dalam kalimat tersebut, seperti:
+
+- aktivitas: mengerjakan tugas pemrograman;
+- tanggal: 18-01-2027;
+- waktu: 07.00;
+- pengulangan: tidak ada.
+
+Hasil pemrosesan AI tidak langsung menjadi reminder aktif. Sistem terlebih dahulu menampilkan hasil tersebut kepada pengguna dalam bentuk preview. Pengguna dapat melakukan perubahan apabila terdapat informasi yang kurang tepat dan kemudian melakukan konfirmasi sebelum reminder disimpan.
+
+AI hanya berperan dalam memahami input pengguna. Informasi reminder yang telah dikonfirmasi, penyimpanan data, pengaturan alarm, notifikasi, serta pengelolaan reminder tetap dikendalikan oleh sistem.
+
+### G. Speech-to-Text
+
+- **Teknologi:** Speech-to-Text API/Service
+- **Integrasi:** Flutter
+- **Justifikasi:** Speech-to-Text digunakan untuk mengubah suara pengguna menjadi teks. Fitur ini memungkinkan pengguna membuat reminder tanpa harus mengetik secara manual.
+
+Contoh penggunaan:
+
+> Pengguna mengatakan: "Jam 8 malam ingatkan saya untuk mengerjakan laporan."
+
+Sistem akan mengubah suara tersebut menjadi teks, kemudian teks dapat diteruskan ke AI Reminder Assistant untuk membantu mengenali informasi reminder.
+
+### H. Local Notification & Alarm
+
+- **Teknologi:** Local Notification
+- **Integrasi:** Flutter
+- **Justifikasi:** Sistem notifikasi lokal digunakan untuk memberikan pengingat kepada pengguna berdasarkan tanggal dan waktu reminder yang telah disimpan. Fitur ini memungkinkan reminder tetap memberikan notifikasi meskipun aplikasi tidak sedang dibuka.
+
+---
+
+## Alur Utama Sistem
+
+```text
+Input Manual / Input Suara
+            ↓
+      Speech-to-Text
+            ↓
+        Teks Input
+            ↓
+   AI Reminder Assistant
+            ↓
+Identifikasi Aktivitas,
+Tanggal, Waktu, Pengulangan
+            ↓
+     Preview Reminder
+            ↓
+    Konfirmasi Pengguna
+            ↓
+     Reminder Disimpan
+            ↓
+ Alarm / Notifikasi Dijadwalkan
+            ↓
+     Reminder Ditampilkan
+            ↓
+Selesai / Snooze / Terlewat
