@@ -1647,3 +1647,192 @@ Pesan kesalahan ditampilkan secara jelas kepada pengguna sesuai SKPL-NF-016.
 - API key layanan AI hanya berada pada sisi backend (SKPL-NF-011);
 - data yang diteruskan ke layanan AI dibatasi pada kebutuhan pemrosesan reminder (SKPL-NF-012);
 - kegagalan API pemrosesan AI tidak mempengaruhi API Reminder sehingga reminder manual tetap dapat dibuat (SKPL-NF-008).
+
+# 4. Perancangan Basis Data
+ 
+## 4.1 Gambaran Basis Data
+ 
+Eling menggunakan **PostgreSQL** yang disediakan melalui **Supabase** sebagai basis data utama. Basis data bersifat relasional dan digunakan untuk menyimpan data pengguna, reminder, kategori, riwayat reminder, pengaturan notifikasi, dan data pemrosesan AI sesuai kebutuhan data pada SKPL Bagian 3.5.
+ 
+Prinsip perancangan basis data:
+ 
+- setiap reminder, riwayat, pengaturan, dan permintaan AI dikaitkan dengan pengguna sehingga akses data dapat dibatasi berdasarkan akun yang sedang login (SKPL-F-003 dan SKPL-NF-009);
+- data kredensial autentikasi dikelola oleh **Supabase Auth** dan tidak disimpan pada tabel aplikasi;
+- kategori bersifat tetap (disediakan sistem) dan digunakan bersama oleh seluruh pengguna;
+- hasil pemrosesan AI yang belum dikonfirmasi tidak disimpan sebagai reminder (SKPL-F-035);
+- pembatasan akses pada tingkat basis data dijelaskan lebih lanjut pada Bab 10.
+## 4.2 Entitas Basis Data
+ 
+| Entitas | Tabel | Fungsi | Dasar SKPL |
+| --- | --- | --- | --- |
+| Pengguna | `profiles` | Menyimpan data profil pengguna yang terhubung dengan akun Supabase Auth. | 3.5.1 |
+| Reminder | `reminders` | Menyimpan data reminder milik pengguna. | 3.5.2 |
+| Kategori | `categories` | Menyimpan daftar kategori reminder. | 3.5.3 |
+| Riwayat Reminder | `reminder_history` | Mencatat status reminder yang selesai atau terlewat. | 3.5.4 |
+| Pengaturan Notifikasi | `notification_settings` | Menyimpan preferensi notifikasi pengguna. | 3.5.5 |
+| Pemrosesan AI | `ai_requests` | Mencatat permintaan dan hasil pemrosesan AI. | 3.5.6 |
+ 
+Data kredensial (email dan kata sandi untuk autentikasi) berada pada layanan Supabase Auth dan menjadi sumber identitas pengguna.
+ 
+## 4.3 Relasi Antarentitas
+ 
+| Relasi | Kardinalitas | Keterangan |
+| --- | --- | --- |
+| `profiles` – `reminders` | satu ke banyak | Satu pengguna dapat memiliki banyak reminder. |
+| `categories` – `reminders` | satu ke banyak | Satu kategori dapat digunakan oleh banyak reminder. |
+| `reminders` – `reminder_history` | satu ke banyak | Satu reminder dapat memiliki catatan riwayat. |
+| `profiles` – `notification_settings` | satu ke satu | Setiap pengguna memiliki satu data pengaturan notifikasi. |
+| `profiles` – `ai_requests` | satu ke banyak | Satu pengguna dapat memiliki banyak permintaan pemrosesan AI. |
+ 
+```mermaid
+erDiagram
+    PROFILES ||--o{ REMINDERS : memiliki
+    CATEGORIES ||--o{ REMINDERS : mengelompokkan
+    REMINDERS ||--o{ REMINDER_HISTORY : tercatat
+    PROFILES ||--|| NOTIFICATION_SETTINGS : mengatur
+    PROFILES ||--o{ AI_REQUESTS : mengajukan
+ 
+    PROFILES {
+        uuid id PK
+        text name
+        text email
+        text avatar_url
+        timestamptz created_at
+    }
+    CATEGORIES {
+        uuid id PK
+        text name
+        text description
+    }
+    REMINDERS {
+        uuid id PK
+        uuid user_id FK
+        uuid category_id FK
+        text title
+        date reminder_date
+        time reminder_time
+        text status
+        text repeat_type
+        text repeat_detail
+        boolean alarm_enabled
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    REMINDER_HISTORY {
+        uuid id PK
+        uuid reminder_id FK
+        text status
+        timestamptz completed_at
+        timestamptz missed_at
+        timestamptz recorded_at
+    }
+    NOTIFICATION_SETTINGS {
+        uuid user_id PK
+        boolean notification_enabled
+        boolean sound_enabled
+        boolean vibration_enabled
+        integer default_snooze_minutes
+        text alarm_sound
+    }
+    AI_REQUESTS {
+        uuid id PK
+        uuid user_id FK
+        text input_text
+        jsonb ai_result
+        text status
+        timestamptz created_at
+    }
+```
+ 
+## 4.4 Struktur Tabel
+ 
+Tipe data yang digunakan mengikuti PostgreSQL. Identitas pengguna (`id` pada `profiles`) merujuk pada identitas akun pada Supabase Auth.
+ 
+### 4.4.1 Tabel `profiles`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | PK, FK ke akun Supabase Auth | Ya | ID pengguna. |
+| `name` | text | | Ya | Nama pengguna. |
+| `email` | text | | Ya | Email pengguna. |
+| `avatar_url` | text | | Tidak | Lokasi foto profil. |
+| `created_at` | timestamptz | | Ya | Waktu pembuatan akun. |
+ 
+### 4.4.2 Tabel `categories`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | PK | Ya | ID kategori. |
+| `name` | text | | Ya | Nama kategori. Bersifat unik. |
+| `description` | text | | Tidak | Deskripsi kategori. |
+ 
+Data awal kategori: Kuliah, Tugas, Pribadi, Kesehatan, Pekerjaan, dan Lainnya (SKPL-F-039).
+ 
+### 4.4.3 Tabel `reminders`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | PK | Ya | ID reminder. |
+| `user_id` | uuid | FK ke `profiles.id` | Ya | Pemilik reminder. |
+| `category_id` | uuid | FK ke `categories.id` | Tidak | Kategori reminder. |
+| `title` | text | | Ya | Judul atau aktivitas reminder. |
+| `reminder_date` | date | | Ya | Tanggal reminder. |
+| `reminder_time` | time | | Ya | Waktu reminder. |
+| `status` | text | | Ya | Status reminder: `aktif`, `selesai`, atau `terlewat`. |
+| `repeat_type` | text | | Ya | Jenis pengulangan: `sekali`, `setiap hari`, `hari kerja`, `mingguan`, atau `tertentu`. |
+| `repeat_detail` | text | | Tidak | Rincian pengulangan, digunakan pada pengulangan tertentu. |
+| `alarm_enabled` | boolean | | Ya | Status alarm reminder. |
+| `created_at` | timestamptz | | Ya | Waktu pembuatan. |
+| `updated_at` | timestamptz | | Ya | Waktu perubahan terakhir. |
+ 
+### 4.4.4 Tabel `reminder_history`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | PK | Ya | ID riwayat. |
+| `reminder_id` | uuid | FK ke `reminders.id` | Ya | Reminder yang dicatat. |
+| `status` | text | | Ya | Status yang dicatat: `selesai` atau `terlewat`. |
+| `completed_at` | timestamptz | | Tidak | Waktu reminder diselesaikan. Terisi apabila status `selesai`. |
+| `missed_at` | timestamptz | | Tidak | Waktu reminder terlewat. Terisi apabila status `terlewat`. |
+| `recorded_at` | timestamptz | | Ya | Waktu pencatatan riwayat. |
+ 
+Riwayat dikaitkan dengan pengguna melalui `reminders.user_id`. Apabila sebuah reminder dihapus, catatan riwayatnya ikut dihapus.
+ 
+### 4.4.5 Tabel `notification_settings`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `user_id` | uuid | PK, FK ke `profiles.id` | Ya | Pemilik pengaturan. |
+| `notification_enabled` | boolean | | Ya | Status notifikasi. |
+| `sound_enabled` | boolean | | Ya | Status suara. |
+| `vibration_enabled` | boolean | | Ya | Status getaran. |
+| `default_snooze_minutes` | integer | | Ya | Durasi snooze default dalam menit. |
+| `alarm_sound` | text | | Tidak | Pilihan suara alarm. |
+ 
+Nilai awal pengaturan ditentukan pada tahap implementasi.
+ 
+### 4.4.6 Tabel `ai_requests`
+ 
+| Kolom | Tipe Data | Kunci | Wajib | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | PK | Ya | ID permintaan. |
+| `user_id` | uuid | FK ke `profiles.id` | Ya | Pengguna yang mengajukan permintaan. |
+| `input_text` | text | | Ya | Teks input pengguna. |
+| `ai_result` | jsonb | | Tidak | Hasil pemrosesan AI sesuai format pada Bagian 7.4. |
+| `status` | text | | Ya | Status pemrosesan: `berhasil` atau `gagal`. |
+| `created_at` | timestamptz | | Ya | Waktu permintaan. |
+ 
+Tabel ini hanya mencatat permintaan dan hasil AI. Data pada tabel ini bukan reminder aktif. Reminder hanya dibuat pada tabel `reminders` setelah pengguna memberikan konfirmasi.
+ 
+### 4.4.7 Pemetaan Kebutuhan Data
+ 
+| Kebutuhan SKPL | Tabel |
+| --- | --- |
+| SKPL-F-001, SKPL-F-004, SKPL-F-005, SKPL-F-048 | `profiles` |
+| SKPL-F-006 s.d. SKPL-F-015, SKPL-F-020 | `reminders` |
+| SKPL-F-038, SKPL-F-039, SKPL-F-043 | `categories`, `reminders` |
+| SKPL-F-021, SKPL-F-040, SKPL-F-041 | `reminder_history`, `reminders` |
+| SKPL-F-019, SKPL-F-044 s.d. SKPL-F-047 | `notification_settings` |
+| SKPL-F-028 s.d. SKPL-F-037 | `ai_requests`, `reminders` |
+ 
+---
