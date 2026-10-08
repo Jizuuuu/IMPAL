@@ -65,14 +65,42 @@
    - [7.6 Penanganan Kesalahan AI](#76-penanganan-kesalahan-ai)
 
 8. [Perancangan Speech-to-Text](#8-perancangan-speech-to-text)
+   - [8.1 Tujuan](#81-tujuan)
+   - [8.2 Teknologi dan Integrasi](#82-teknologi-dan-integrasi)
+   - [8.3 Alur Proses](#83-alur-proses)
+   - [8.4 Input dan Output](#84-input-dan-output)
+   - [8.5 Penanganan Kesalahan](#85-penanganan-kesalahan)
+   - [8.6 Pemetaan Kebutuhan](#86-pemetaan-kebutuhan)
 
 9. [Perancangan API](#9-perancangan-api)
+   - [9.1 Gambaran Umum](#91-gambaran-umum)
+   - [9.2 Autentikasi dan Otorisasi](#92-autentikasi-dan-otorisasi)
+   - [9.3 Daftar API](#93-daftar-api)
+   - [9.4 Format Respons Kesalahan](#94-format-respons-kesalahan)
+   - [9.5 Ketentuan Penggunaan API](#95-ketentuan-penggunaan-api)
 
 10. [Perancangan Keamanan](#10-perancangan-keamanan)
+   - [10.1 Tujuan dan Lingkup](#101-tujuan-dan-lingkup)
+   - [10.2 Autentikasi](#102-autentikasi)
+   - [10.3 Otorisasi dan Kontrol Akses Data](#103-otorisasi-dan-kontrol-akses-data)
+   - [10.4 Keamanan Komunikasi](#104-keamanan-komunikasi)
+   - [10.5 Keamanan Integrasi AI](#105-keamanan-integrasi-ai)
+   - [10.6 Privasi Data](#106-privasi-data)
+   - [10.7 Pemetaan Kebutuhan Keamanan](#107-pemetaan-kebutuhan-keamanan)
 
 11. [Perancangan Deployment](#11-perancangan-deployment)
+   - [11.1 Gambaran Deployment](#111-gambaran-deployment)
+   - [11.2 Komponen Deployment](#112-komponen-deployment)
+   - [11.3 Kebutuhan Lingkungan](#113-kebutuhan-lingkungan)
+   - [11.4 Konfigurasi dan Pengelolaan Kredensial](#114-konfigurasi-dan-pengelolaan-kredensial)
+   - [11.5 Tahapan Deployment](#115-tahapan-deployment)
+   - [11.6 Pertimbangan Operasional](#116-pertimbangan-operasional)
 
 12. [Pemetaan SKPL terhadap Perancangan](#12-pemetaan-skpl-terhadap-perancangan)
+   - [12.1 Pemetaan Kebutuhan Fungsional](#121-pemetaan-kebutuhan-fungsional)
+   - [12.2 Pemetaan Kebutuhan Nonfungsional](#122-pemetaan-kebutuhan-nonfungsional)
+   - [12.3 Pemetaan Use Case](#123-pemetaan-use-case)
+   - [12.4 Hal yang Ditentukan pada Tahap Implementasi](#124-hal-yang-ditentukan-pada-tahap-implementasi)
 
 ---
 
