@@ -2101,3 +2101,271 @@ Pesan kesalahan ditampilkan secara jelas kepada pengguna sesuai SKPL-NF-016.
 | SKPL-F-028 s.d. SKPL-F-037 | `ai_requests`, `reminders` |
  
 ---
+
+# 10. Perancangan Keamanan
+
+## 10.1 Tujuan dan Lingkup
+
+Perancangan keamanan Eling bertujuan melindungi akun pengguna, data reminder, dan kredensial layanan, sesuai kebutuhan keamanan dan privasi pada SKPL (SKPL-F-003, SKPL-NF-009 s.d. SKPL-NF-012).
+
+Lingkup perancangan keamanan meliputi:
+
+- autentikasi pengguna;
+- pembatasan akses data berdasarkan akun;
+- keamanan komunikasi;
+- keamanan integrasi AI dan Speech-to-Text;
+- privasi data pengguna.
+
+## 10.2 Autentikasi
+
+- Autentikasi dilakukan menggunakan **Supabase Auth** untuk registrasi, login, dan logout (Bagian 3.1 dan 9.3.1).
+- Email dan kata sandi dikelola oleh Supabase Auth. Tabel aplikasi tidak menyimpan kata sandi (Bagian 4.1).
+- Setelah login, aplikasi menerima token akses yang dikirim pada setiap permintaan ke API data dan API pemrosesan AI. Permintaan tanpa token yang valid ditolak (Bagian 9.2).
+- Aplikasi memvalidasi input sebelum dikirim ke layanan autentikasi (Bagian 5.3 dan 6.1).
+- Pesan kesalahan autentikasi ditampilkan dengan jelas kepada pengguna tanpa menampilkan detail teknis internal sistem (SKPL-NF-016).
+
+## 10.3 Otorisasi dan Kontrol Akses Data
+
+Pengguna hanya dapat mengakses data miliknya sendiri (SKPL-F-003 dan SKPL-NF-009). Pembatasan ini diterapkan pada tingkat basis data menggunakan mekanisme kontrol akses baris (*Row Level Security*) pada PostgreSQL melalui Supabase, sehingga pembatasan tetap berlaku meskipun permintaan dikirim langsung ke API.
+
+| Tabel | Aturan Akses |
+| --- | --- |
+| `profiles` | Pengguna hanya dapat melihat dan mengubah profil dengan `id` yang sama dengan akun yang sedang login. |
+| `reminders` | Pengguna hanya dapat membuat, melihat, mengubah, dan menghapus reminder dengan `user_id` yang sama dengan akun yang sedang login. |
+| `reminder_history` | Pengguna hanya dapat mengakses riwayat dari reminder miliknya (melalui `reminders.user_id`). |
+| `notification_settings` | Pengguna hanya dapat melihat dan mengubah pengaturan dengan `user_id` yang sama dengan akun yang sedang login. |
+| `ai_requests` | Pengguna hanya dapat mengakses permintaan AI miliknya sendiri. |
+| `categories` | Dapat dibaca oleh pengguna yang telah login dan tidak dapat diubah oleh pengguna. |
+
+Aplikasi mobile hanya menggunakan kunci akses publik yang disediakan Supabase untuk aplikasi klien. Kunci dengan hak akses penuh tidak ditempatkan pada aplikasi mobile. Kunci publik tersebut aman digunakan karena akses data dibatasi oleh aturan pada tabel di atas.
+
+## 10.4 Keamanan Komunikasi
+
+- Seluruh komunikasi antara aplikasi, backend, dan layanan eksternal menggunakan HTTPS (SKPL Bagian 3.1.4 dan DPPL Bagian 9.2).
+- Kredensial pengguna tidak dikirim atau disimpan dalam bentuk yang tidak aman (SKPL-NF-010).
+- Data yang dikirim ke layanan eksternal dibatasi sesuai kebutuhan fitur.
+- Suara dikirim ke layanan Speech-to-Text hanya ketika pengguna menekan tombol mikrofon dan telah memberikan izin mikrofon (Bagian 8.3).
+
+## 10.5 Keamanan Integrasi AI
+
+Ketentuan keamanan pada integrasi dengan Google Gemini API:
+
+- API key Google Gemini hanya berada pada sisi backend, disimpan sebagai konfigurasi rahasia, dan tidak ditempatkan pada kode aplikasi mobile maupun repositori kode (SKPL-NF-011);
+- permintaan pemrosesan AI hanya dapat dikirim oleh pengguna yang telah terautentikasi (Bagian 9.2);
+- data yang dikirim ke AI hanya berupa teks input dan informasi tanggal serta waktu saat ini (Bagian 7.4), tanpa email, kata sandi, atau data pribadi lain (SKPL-NF-012);
+- hasil AI diperlakukan sebagai data yang belum terpercaya. Hasil diperiksa terhadap format yang ditentukan (Bagian 7.4), hanya ditampilkan sebagai preview, dan baru disimpan setelah pengguna memberikan konfirmasi serta data lolos validasi (SKPL-F-035 dan SKPL-NF-015);
+- AI tidak dapat mengubah atau menghapus data reminder. Hasil AI hanya dikembalikan ke aplikasi sebagai preview.
+
+## 10.6 Privasi Data
+
+- Data pengguna hanya digunakan sesuai kebutuhan aplikasi dan tidak dikirim ke layanan AI apabila tidak diperlukan (SKPL-NF-012).
+- Teks input AI yang dicatat pada tabel `ai_requests` hanya dapat diakses oleh pemilik data (Bagian 10.3).
+- Aplikasi hanya meminta izin perangkat yang diperlukan, yaitu izin notifikasi dan izin mikrofon (SKPL Bagian 2.6).
+- Aktivitas reminder ditampilkan pada notifikasi (SKPL-F-017). Tingkat kerahasiaan tampilan notifikasi pada layar perangkat mengikuti pengaturan sistem operasi perangkat.
+
+## 10.7 Pemetaan Kebutuhan Keamanan
+
+| Kebutuhan SKPL | Rancangan |
+| --- | --- |
+| SKPL-F-003, SKPL-NF-009 | Kontrol akses data per akun (Bagian 4.1, 9.2, dan 10.3) |
+| SKPL-NF-010 | Supabase Auth, token akses, dan HTTPS (Bagian 10.2 dan 10.4) |
+| SKPL-NF-011 | API key AI hanya pada backend (Bagian 7.5, 9.5, dan 10.5) |
+| SKPL-NF-012 | Pembatasan data yang dikirim ke layanan eksternal (Bagian 7.2, 9.5, dan 10.6) |
+| SKPL-NF-015 | Validasi data sebelum disimpan (Bagian 6.2, 6.5, dan 10.5) |
+
+---
+
+# 11. Perancangan Deployment
+
+## 11.1 Gambaran Deployment
+
+Eling dijalankan pada perangkat Android dan menggunakan layanan backend serta layanan eksternal melalui internet. Reminder yang telah dijadwalkan diberikan sebagai notifikasi lokal oleh perangkat.
+
+```mermaid
+flowchart LR
+    subgraph Perangkat["Perangkat Android"]
+        App["Aplikasi Eling - Flutter"]
+        LN["Local Notification"]
+        Mic["Mikrofon dan Speaker"]
+    end
+
+    subgraph Backend["Supabase"]
+        Auth["Supabase Auth"]
+        API["REST API"]
+        DB[("PostgreSQL")]
+        AIP["Pemrosesan AI di sisi backend"]
+    end
+
+    STT["Layanan Speech-to-Text"]
+    Gemini["Google Gemini API"]
+
+    App -->|HTTPS| Auth
+    App -->|HTTPS| API
+    API --> DB
+    App -->|HTTPS| AIP
+    AIP -->|HTTPS| Gemini
+    App -->|Suara| STT
+    App --> LN
+    Mic --- App
+```
+
+## 11.2 Komponen Deployment
+
+| Komponen | Lingkungan | Keterangan |
+| --- | --- | --- |
+| Aplikasi mobile Eling | Perangkat Android pengguna | Dibangun menggunakan Flutter dan Dart. Menampilkan antarmuka, menjalankan validasi, dan menjadwalkan local notification. |
+| Supabase Auth | Layanan Supabase | Menangani registrasi, login, logout, dan sesi pengguna. |
+| REST API dan PostgreSQL | Layanan Supabase | Menyediakan akses dan penyimpanan data pengguna, reminder, kategori, riwayat, pengaturan, dan permintaan AI. |
+| Pemrosesan AI | Sisi backend | Menerima teks dari aplikasi dan meneruskannya ke Google Gemini API. Bentuk implementasinya ditentukan pada tahap implementasi. |
+| Google Gemini API | Layanan eksternal | Mengenali aktivitas, tanggal, waktu, dan pengulangan dari teks input. |
+| Layanan Speech-to-Text | Layanan eksternal | Mengubah suara pengguna menjadi teks. Layanan yang dipilih ditentukan pada tahap implementasi (Bagian 8.2). |
+| Local Notification | Perangkat Android pengguna | Menampilkan alarm atau notifikasi pada waktu reminder. |
+
+## 11.3 Kebutuhan Lingkungan
+
+**Perangkat pengguna:**
+
+- perangkat Android yang mendukung versi Flutter dan dependensi yang digunakan (SKPL-NF-013);
+- layar sentuh, speaker, dan mikrofon;
+- izin notifikasi dan izin mikrofon yang diberikan kepada aplikasi;
+- tanggal dan waktu perangkat yang diatur dengan benar;
+- koneksi internet untuk autentikasi, penyimpanan data, Speech-to-Text, dan pemrosesan AI.
+
+**Layanan:**
+
+- proyek Supabase yang menyediakan autentikasi, PostgreSQL, dan REST API;
+- akses ke Google Gemini API dari sisi backend;
+- layanan Speech-to-Text yang dapat diakses dari aplikasi.
+
+Versi minimum Android ditentukan pada tahap implementasi mengikuti kompatibilitas Flutter dan pustaka yang digunakan.
+
+## 11.4 Konfigurasi dan Pengelolaan Kredensial
+
+| Konfigurasi | Lokasi | Ketentuan |
+| --- | --- | --- |
+| Alamat proyek Supabase dan kunci akses publik | Konfigurasi aplikasi mobile | Hanya kunci publik yang digunakan pada aplikasi. Akses data dibatasi oleh aturan pada Bagian 10.3. |
+| Kunci dengan hak akses penuh Supabase | Tidak ditempatkan pada aplikasi | Hanya digunakan pada sisi server apabila diperlukan. |
+| API key Google Gemini | Konfigurasi rahasia pada sisi backend | Tidak ditempatkan pada aplikasi mobile dan tidak disimpan pada repositori kode (SKPL-NF-011). |
+
+Berkas konfigurasi yang berisi kredensial tidak disertakan pada repositori kode sumber.
+
+## 11.5 Tahapan Deployment
+
+1. Menyiapkan proyek Supabase: mengaktifkan Supabase Auth dan membuat tabel sesuai rancangan basis data (Bab 4).
+2. Mengisi data awal kategori: Kuliah, Tugas, Pribadi, Kesehatan, Pekerjaan, dan Lainnya.
+3. Menerapkan aturan akses data per akun pada setiap tabel (Bagian 10.3).
+4. Menyiapkan komponen pemrosesan AI pada sisi backend dengan API key Google Gemini sebagai konfigurasi rahasia.
+5. Mengatur konfigurasi aplikasi Flutter agar terhubung dengan proyek Supabase dan layanan Speech-to-Text.
+6. Membangun aplikasi Flutter menjadi paket aplikasi Android.
+7. Memasang aplikasi pada perangkat Android dan memeriksa izin notifikasi serta izin mikrofon.
+8. Menguji alur utama: login, pembuatan reminder manual, pembuatan reminder dengan suara dan AI, notifikasi, snooze, dan penyelesaian reminder.
+
+Metode distribusi aplikasi kepada pengguna belum ditetapkan pada dokumen ini.
+
+## 11.6 Pertimbangan Operasional
+
+- Fitur Speech-to-Text dan AI bergantung pada koneksi internet dan ketersediaan layanan eksternal (SKPL Bagian 2.5 dan 2.6). Kegagalan kedua layanan tersebut tidak mengganggu pembuatan reminder manual (SKPL-NF-008).
+- Setelah reminder dijadwalkan, local notification dijalankan oleh perangkat sehingga notifikasi dapat muncul tanpa aplikasi dibuka secara terus-menerus (SKPL-F-022).
+- Pemberian notifikasi bergantung pada izin dan konfigurasi sistem operasi perangkat (SKPL-NF-017).
+- Reminder yang telah disimpan tetap tersedia pada basis data meskipun aplikasi ditutup (SKPL-NF-007).
+
+---
+
+# 12. Pemetaan SKPL terhadap Perancangan
+
+Bab ini menunjukkan keterkaitan setiap kebutuhan pada SKPL dengan bagian rancangan pada dokumen DPPL ini.
+
+## 12.1 Pemetaan Kebutuhan Fungsional
+
+| Kebutuhan SKPL | Rancangan pada DPPL |
+| --- | --- |
+| SKPL-F-001 | 3.1, 4.4.1, 5.3, 6.1, 9.3.1 |
+| SKPL-F-002 | 3.1, 5.2, 6.1, 9.3.1 |
+| SKPL-F-003 | 3.1, 4.1, 9.2, 10.3 |
+| SKPL-F-004, SKPL-F-005 | 4.4.1, 5.10, 9.3.1 |
+| SKPL-F-006, SKPL-F-007, SKPL-F-008, SKPL-F-009 | 3.2, 4.4.3, 5.5, 6.2, 9.3.2 |
+| SKPL-F-010 | 3.2, 5.5, 5.8, 6.2, 9.3.2 |
+| SKPL-F-011 | 3.2, 5.8, 6.2, 9.3.2 |
+| SKPL-F-012 | 3.2, 5.4, 9.3.2 |
+| SKPL-F-013, SKPL-F-014 | 3.2.6, 4.4.3, 5.5, 9.3.2 |
+| SKPL-F-015 | 3.2, 5.8, 9.3.2 |
+| SKPL-F-016, SKPL-F-017 | 2.4.4, 3.3, 6.6 |
+| SKPL-F-018 | 3.3.6, 6.7 |
+| SKPL-F-019 | 3.3.6, 4.4.5, 6.7, 9.3.3 |
+| SKPL-F-020 | 3.3, 5.8, 6.8, 9.3.2 |
+| SKPL-F-021 | 3.7, 4.4.4, 6.6, 6.8, 9.3.2, 9.3.3 |
+| SKPL-F-022 | 3.3, 6.6, 11.6 |
+| SKPL-F-023 | 3.4, 5.6, 6.3, 8.3 |
+| SKPL-F-024 | 3.4, 8.2, 8.3 |
+| SKPL-F-025, SKPL-F-026 | 3.4, 5.6, 8.4 |
+| SKPL-F-027 | 3.4.5, 8.5 |
+| SKPL-F-028 | 3.5, 6.4, 7.2, 9.3.4 |
+| SKPL-F-029, SKPL-F-030, SKPL-F-031, SKPL-F-032 | 3.5, 7.3, 7.4, 9.3.4 |
+| SKPL-F-033 | 3.5.6, 5.7, 6.5, 7.3 |
+| SKPL-F-034 | 3.5.6, 5.7, 6.5 |
+| SKPL-F-035 | 3.5.6, 4.4.6, 6.5, 7.5, 9.3.4 |
+| SKPL-F-036 | 3.5.7, 7.6, 9.4 |
+| SKPL-F-037 | 3.5.7, 7.6, 9.5 |
+| SKPL-F-038, SKPL-F-039 | 3.6, 4.4.2, 5.5, 9.3.3 |
+| SKPL-F-040, SKPL-F-041 | 3.7, 4.4.4, 5.9, 6.8, 9.3.3 |
+| SKPL-F-042 | 3.8, 5.4, 9.3.2 |
+| SKPL-F-043 | 3.6, 5.4, 9.3.2 |
+| SKPL-F-044, SKPL-F-045, SKPL-F-046, SKPL-F-047 | 3.9, 4.4.5, 5.10, 6.6, 9.3.3 |
+| SKPL-F-048 | 4.4.1, 5.10, 9.3.1 |
+
+## 12.2 Pemetaan Kebutuhan Nonfungsional
+
+| Kebutuhan SKPL | Kategori | Rancangan pada DPPL |
+| --- | --- | --- |
+| SKPL-NF-001 | Kegunaan | 5.1 |
+| SKPL-NF-002 | Kegunaan | 5.5, 6.2 |
+| SKPL-NF-003 | Kegunaan | 5.1 |
+| SKPL-NF-004 | Kinerja | 9.1, 11.1 |
+| SKPL-NF-005 | Kinerja | 6.3, 6.4, 7.5, 8.5 |
+| SKPL-NF-006 | Kinerja | 7.6, 8.5 |
+| SKPL-NF-007 | Keandalan | Bab 4, 11.6 |
+| SKPL-NF-008 | Keandalan | 3.5.7, 7.6, 9.5, 11.6 |
+| SKPL-NF-009 | Keamanan | 4.1, 9.2, 10.3 |
+| SKPL-NF-010 | Keamanan | 9.2, 10.2, 10.4 |
+| SKPL-NF-011 | Keamanan | 2.2.3, 7.5, 9.5, 10.5, 11.4 |
+| SKPL-NF-012 | Privasi | 7.2, 9.5, 10.6 |
+| SKPL-NF-013 | Kompatibilitas | 11.3 |
+| SKPL-NF-014 | Konsistensi | 5.1 |
+| SKPL-NF-015 | Validasi | 2.2.2, 6.2, 6.5, 9.5 |
+| SKPL-NF-016 | Penanganan Kesalahan | 6.3, 7.6, 8.5, 9.4 |
+| SKPL-NF-017 | Ketersediaan | 3.3, 6.6, 11.6 |
+| SKPL-NF-018 | Pemeliharaan | 2.2, Bab 3 |
+
+## 12.3 Pemetaan Use Case
+
+| Use Case | Rancangan pada DPPL |
+| --- | --- |
+| UC-01 Registrasi dan Login | 3.1, 5.2, 5.3, 6.1 |
+| UC-02 Mengelola Profil | 4.4.1, 5.10, 9.3.1 |
+| UC-03 Membuat Reminder Manual | 3.2, 5.5, 6.2 |
+| UC-04 Melihat Reminder | 5.4, 5.8 |
+| UC-05 Mengubah Reminder | 5.5, 5.8, 6.2 |
+| UC-06 Menghapus Reminder | 5.8, 6.2 |
+| UC-07 Mengatur Reminder Berulang | 3.2.6, 4.4.3, 5.5 |
+| UC-08 Menerima Alarm atau Notifikasi | 3.3, 6.6 |
+| UC-09 Melakukan Snooze Reminder | 3.3.6, 6.7 |
+| UC-10 Menyelesaikan Reminder | 5.8, 6.8 |
+| UC-11 Input Reminder dengan Suara | 3.4, 5.6, 6.3, Bab 8 |
+| UC-12 Memproses Reminder dengan AI | 3.5, 6.4, Bab 7 |
+| UC-13 Mengonfirmasi Hasil AI | 3.5.6, 5.7, 6.5 |
+| UC-14 Mengelola Kategori Reminder | 3.6, 4.4.2, 5.4, 5.5 |
+| UC-15 Melihat Riwayat Reminder | 3.7, 5.9 |
+| UC-16 Mencari Reminder | 3.8, 5.4 |
+| UC-17 Mengatur Notifikasi | 3.9, 5.10 |
+
+## 12.4 Hal yang Ditentukan pada Tahap Implementasi
+
+Beberapa hal tidak ditentukan secara rinci pada SKPL sehingga ditetapkan pada tahap implementasi:
+
+- layanan atau pustaka Speech-to-Text dan bahasa pengenalan suara (Bagian 8.2);
+- nilai awal pengaturan notifikasi dan pilihan durasi snooze (Bagian 4.4.5);
+- batas waktu proses Speech-to-Text dan pemrosesan AI (Bagian 7.6 dan 8.5);
+- ketentuan waktu yang menentukan kapan reminder dianggap terlewat (Bagian 6.6);
+- pencatatan status per kejadian pada reminder berulang (Bagian 6.8);
+- versi minimum Android (Bagian 11.3);
+- bentuk implementasi komponen pemrosesan AI pada sisi backend dan metode distribusi aplikasi (Bagian 11.2 dan 11.5).
